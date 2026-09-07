@@ -53,5 +53,8 @@
   ],
   "blog_repository": "https://github.com/CityuHK-wyj/cityuhk-wyj.github.io",
   "blog_url": "https://cityuhk-wyj.github.io/",
-  "deployment_status_url": "https://github.com/CityuHK-wyj/cityuhk-wyj.github.io/actions"
+  "deployment_status_url": "https://github.com/CityuHK-wyj/cityuhk-wyj.github.io/actions",
+  "blog_deployed": true,
+  "last_deployment_status": "success",
+  "last_deployment_verified_at": "2026-09-07T02:48:37Z"
 }

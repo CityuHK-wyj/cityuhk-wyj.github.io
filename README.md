@@ -9,7 +9,9 @@
 - 全文上下文：https://cityuhk-wyj.github.io/llms-full.txt
 - 发布记录：https://github.com/CityuHK-wyj/cityuhk-wyj.github.io/actions
 
-仓库已创建并授权。根目录包含首版生成网页，兼容现有 Pages 分支发布配置；日常修改 Markdown 后，Publish blog 工作流构建并部署 dist。请以 Actions 的实际部署结果判断上线状态。
+仓库已经写入首批博客；2026-09-07 的 Publish blog 工作流完成构建、检查与 GitHub Pages 部署。
+
+根目录包含首版生成网页，以兼容 Pages 分支发布配置；日常修改 Markdown 后，Publish blog 工作流将重新构建并部署 dist。请以 Actions 的实际部署结果判断最新上线状态。
 
 维护时建议在 Settings → Pages → Build and deployment → Source 选择 **GitHub Actions**，使发布只由自定义工作流负责。
 
