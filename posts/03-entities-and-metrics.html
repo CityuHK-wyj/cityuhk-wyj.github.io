@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>先弄清楚是谁、什么指标，再考虑 SQL · Yijie Notes</title><meta name="description" content="同名与绰号消歧、指标语义层、Schema RAG，以及 Web 字段如何适配。"><meta name="author" content="WANG Yijie"><link rel="canonical" href="https://cityuhk-wyj.github.io/posts/03-entities-and-metrics.html"><meta property="og:type" content="article"><meta property="og:title" content="先弄清楚是谁、什么指标，再考虑 SQL"><meta property="og:description" content="同名与绰号消歧、指标语义层、Schema RAG，以及 Web 字段如何适配。"><meta property="og:url" content="https://cityuhk-wyj.github.io/posts/03-entities-and-metrics.html"><link rel="stylesheet" href="../assets/style.css"><link rel="alternate" type="application/rss+xml" title="Yijie Notes" href="../feed.xml"></head><body><a class="skip" href="#main">跳转到正文</a><header><div class="bar"><a class="brand" href="../index.html">YIJIE <span aria-hidden="true">/</span> NOTES</a><nav aria-label="主导航"><a href="../index.html">文章</a><a href="../knowledge/current-state.html">项目状态</a><a href="../llms.txt">LLM 入口</a><a href="https://github.com/CityuHK-wyj">GitHub</a></nav></div></header><main id="main" class="wrap"><div class="article-layout"><aside class="toc" aria-label="文章目录"><strong>本文目录</strong><a href="#section-1">姓名用于交流，ID 用于连接</a><a href="#section-2">指标语义层与 Schema RAG 是两件事</a><a href="#section-3">fields 不应被数据库列名完全绑住</a><a href="#section-4">歧义应在成本最高的动作之前解决</a><a href="../index.html">返回全部文章</a></aside><article><div class="eyebrow">FIELD NOTES / 03</div><h1>先弄清楚是谁、什么指标，再考虑 SQL</h1><div class="article-meta">首发 2026-09-07 · 更新 2026-09-07 · 语义理解<br><a href="03-entities-and-metrics.md">Markdown 原文</a><a href="../llms-full.txt">完整文本</a></div>
+<p>用户说 Hernández、Will 或 Kyle 时，系统未必知道他指谁。项目还讨论过“交通指挥员”这样的社区绰号：在此前对话中，它被用来指 Gerrit Cole。这个映射有上下文和时效性，不能作为全球唯一且永久有效的名称规则。</p>
+<p><strong>记录性质：</strong> 讨论结论整理；具体字段结构仍属建议。</p>
+<h2 id="section-1">姓名用于交流，ID 用于连接</h2>
+<p>已经形成的原则是：实体解析应保留用户原始表达，找到候选球员，再结合球队、赛季、角色和前文确认身份。如果候选仍有多个，向用户提出简短澄清；不要因为某个名字最知名就默默选定。</p>
+<p>统一命名规范有价值，但名字变得整齐并不能消除同名。真正用于数据库查询和跨源连接的应是稳定标识，同时记录它属于哪个来源。不同网站的球员 ID 不能仅凭数字相等就直接相连。</p>
+<p>可选的实体输出结构可以包含 <code>raw_mention</code>、<code>entity_type</code>、<code>canonical_name</code>、<code>source_ids</code> 和候选依据。这些字段是本次整理提供的实现方向，并非已经确认的正式 schema。</p>
+<h2 id="section-2">指标语义层与 Schema RAG 是两件事</h2>
+<p>“平均击球初速”是语义；某张表的 <code>launch_speed</code> 是物理字段。指标语义层需要解释如何选择事件、忽略哪些缺失值、分母是什么、单位是什么；Schema RAG 需要提供真实可用的表、列、关联关系和计算所需字段。</p>
+<p>如果只检索列名，模型可能知道使用哪个字段，却不知道该在哪些事件上聚合。如果只提供指标说明，模型可能理解了概念，却编造数据库不存在的字段。因此两层需要协作。</p>
+<p>一个可维护的检索单元可以包含：指标含义、适用年份、粒度、数据源、依赖字段、过滤规则、已验证表达式与限制。项目讨论过使用向量检索，也担心一次注入太多说明分散模型注意力；目前没有证据表明向量库选型已经最终确定。</p>
+<h2 id="section-3">fields 不应被数据库列名完全绑住</h2>
+<p>讨论中的关键问题是：任务中的 <code>fields</code> 可以描述语义指标，但数据库字段应当受到真实 schema 约束。新闻和半结构化网页并不遵循数据库命名，如果强行把它们放进同一组物理字段，维护成本会快速上升。</p>
+<p><strong>本次整理建议：</strong> 任务层表达所需信息，数据源适配层负责将它翻译成具体字段或抓取目标。数据库查询通过 Schema RAG 与验证器约束；Web 输出保留原文证据，由受约束的抽取步骤生成结构化字段，再验证日期、单位和来源。</p>
+<p>这保留了 LLM 处理非标准文本的能力，同时使最终结果可以核对。它并不要求为所有自然语言短语手写一张穷尽映射表。</p>
+<h2 id="section-4">歧义应在成本最高的动作之前解决</h2>
+<p>“高区快速球”至少需要确定球种集合与区域定义；“近 30 天”需要明确截止日期与时区；“表现最好”需要指定评价指标。对于已有明确会话约束的内容应直接复用；对会改变查询结果的关键歧义应澄清或明确披露假设。</p>
+<p>不是每个问题都要启动长问卷。要问的是会导致查询对象、过滤条件或统计口径不同的那一点。</p>
+<p><strong>来源：</strong> S1，尤其球员命名、字段约束、Schema RAG 与 Web 结构化讨论。</p>
+<div class="article-foot"><a href="../index.html">全部文章</a><a href="04-task-contracts.html">下一篇：Task Planner：任务之间传递什么，才能继续执行</a></div></article></div></main><footer><span>WANG Yijie · Baseball Agent 开发记录</span><span><a href="../knowledge/sources.html">来源与覆盖范围</a> · <a href="../feed.xml">RSS</a> · 2026</span></footer></body></html>

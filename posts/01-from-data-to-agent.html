@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>从棒球数据脚本，到能解释自己结论的 Agent · Yijie Notes</title><meta name="description" content="从四工具原型回看架构如何形成，以及哪些模块仍停留在设计阶段。"><meta name="author" content="WANG Yijie"><link rel="canonical" href="https://cityuhk-wyj.github.io/posts/01-from-data-to-agent.html"><meta property="og:type" content="article"><meta property="og:title" content="从棒球数据脚本，到能解释自己结论的 Agent"><meta property="og:description" content="从四工具原型回看架构如何形成，以及哪些模块仍停留在设计阶段。"><meta property="og:url" content="https://cityuhk-wyj.github.io/posts/01-from-data-to-agent.html"><link rel="stylesheet" href="../assets/style.css"><link rel="alternate" type="application/rss+xml" title="Yijie Notes" href="../feed.xml"></head><body><a class="skip" href="#main">跳转到正文</a><header><div class="bar"><a class="brand" href="../index.html">YIJIE <span aria-hidden="true">/</span> NOTES</a><nav aria-label="主导航"><a href="../index.html">文章</a><a href="../knowledge/current-state.html">项目状态</a><a href="../llms.txt">LLM 入口</a><a href="https://github.com/CityuHK-wyj">GitHub</a></nav></div></header><main id="main" class="wrap"><div class="article-layout"><aside class="toc" aria-label="文章目录"><strong>本文目录</strong><a href="#section-1">一个贯穿设计的问题</a><a href="#section-2">早期原型做到了什么</a><a href="#section-3">后续架构的职责划分</a><a href="#section-4">已形成的方向与尚未完成的工作</a><a href="../index.html">返回全部文章</a></aside><article><div class="eyebrow">FIELD NOTES / 01</div><h1>从棒球数据脚本，到能解释自己结论的 Agent</h1><div class="article-meta">首发 2026-09-07 · 更新 2026-09-07 · 项目起点<br><a href="01-from-data-to-agent.md">Markdown 原文</a><a href="../llms-full.txt">完整文本</a></div>
+<p>这份开发记录起于一个很具体的愿望：用自然语言问棒球问题，让系统找到数据、算出结果，再解释为什么值得相信。数据查询只是其中一环。真正困难的是，问题会跨越球员身份、统计口径、赛季、数据库和新闻，任何一环含糊，最终报告都可能看似专业却答错题。</p>
+<p><strong>记录性质：</strong> 项目讨论回顾；部分实现有历史代码可证，当前代码库未核验。本文与其余首批文章统一整理于 2026-09-07，讨论日期另列于来源索引。</p>
+<h2 id="section-1">一个贯穿设计的问题</h2>
+<p>项目反复使用的例子是：2025–2026 赛季，两好球之后，面对速度大于 95 mph、位于高区的快速球，击球初速最高的前五名打者是谁？再补充薪资，分析性价比。</p>
+<p>这句话已经包含多个决策：两好球是投球前的 count 还是打席最终状态？高区如何定义？“最高”指单次最高还是平均最高？样本门槛按打席、击球事件还是具有有效 EV 的击球事件计算？薪资指哪个赛季的现金收入、合同年均值还是其他口径？</p>
+<p>因此，目标逐渐从“让模型调用数据库”变成“让模型在明确约束下组织证据”。模型可以理解问题、提出计划、解释结果；可复现的计算和执行边界需要交给程序。</p>
+<h2 id="section-2">早期原型做到了什么</h2>
+<p>可访问的历史脚本注册了四个工具：<code>query_local_hot_db</code>、<code>query_local_cold_parquet</code>、<code>fetch_mlb_network_api</code> 和 <code>fetch_mlb_player_names</code>。它们分别查询 PostgreSQL、通过 DuckDB 读取 Parquet、获取联网赛季数据、把球员 ID 转成姓名。</p>
+<p>主循环把工具清单交给模型，收到调用请求后执行，再把结果放回上下文。当模型不再发出工具调用时，程序直接输出最终回答。这证明当时已经存在多轮工具调用的原型代码，但不能证明每个查询都运行成功，也不能证明后续架构已落地。</p>
+<p>原型暴露出的边界很清楚：业务规则大量堆在提示词里；SQL 直接送入执行器；联网结果提前截取前 15 行；停止条件主要由模型是否继续调用工具决定。这些问题不能仅靠再加一句“请严谨”解决。</p>
+<h2 id="section-3">后续架构的职责划分</h2>
+<div class="table-wrap" tabindex="0" role="region" aria-label="可横向滚动的数据表"><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>主要职责</th>
+<th>交接内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Conversation</td>
+<td>保留原问题、澄清结果与已确认约束</td>
+<td>raw_query 与会话状态</td>
+</tr>
+<tr>
+<td>Semantic</td>
+<td>实体消歧、指标解释、Schema RAG、识别联网需求</td>
+<td>规范化意图</td>
+</tr>
+<tr>
+<td>Planner</td>
+<td>拆解任务、建立依赖、审阅执行反馈</td>
+<td>任务计划与修订</td>
+</tr>
+<tr>
+<td>Router / Tools</td>
+<td>按能力和覆盖范围选择并调用数据源</td>
+<td>真实执行结果</td>
+</tr>
+<tr>
+<td>Validation</td>
+<td>SQL、权限、数据质量与任务完成检查</td>
+<td>错误、缺口与可用证据</td>
+</tr>
+<tr>
+<td>Feature Engine</td>
+<td>按显式口径计算指标</td>
+<td>可复现分析结果</td>
+</tr>
+<tr>
+<td>Formatter</td>
+<td>解释证据、注明限制与来源</td>
+<td>面向用户的报告</td>
+</tr>
+</tbody></table></div>
+<p>这不是必须逐个部署的七个服务。第一版可以仍是一个 Python 项目，通过清晰的函数、类型和模块边界实现职责分离。</p>
+<h2 id="section-4">已形成的方向与尚未完成的工作</h2>
+<p>已形成的方向包括：保留 LLM 写 SQL 的能力；结构化传递任务与结果；以真实工具反馈更新计划；记录数据来源；遇到实体歧义时允许澄清；证据不足时不能生成确定性结论。</p>
+<p>正式的任务 schema、状态迁移规则、检查点存储、结果质量评分和向量库选型仍缺少完整定稿证据。2026 年 8 月的讨论提到已创建项目目录骨架，但主要是占位符，原脚本没有完成迁移。博客应当帮助后续开发定位这些缺口，而不能把目录存在写成模块完成。</p>
+<p>接下来最有价值的进展，是让一个小问题从输入一直走到带证据的回答，并在中间任一步失败时给出可信的失败说明。</p>
+<p><strong>来源：</strong> S1 项目讨论摘要；S2 历史四工具原型。详见<a href="../knowledge/sources.html">来源与覆盖范围</a>。</p>
+<div class="article-foot"><a href="../index.html">全部文章</a><a href="02-data-and-statistical-grain.html">下一篇：数据层：热库、冷库，以及一行究竟代表什么</a></div></article></div></main><footer><span>WANG Yijie · Baseball Agent 开发记录</span><span><a href="../knowledge/sources.html">来源与覆盖范围</a> · <a href="../feed.xml">RSS</a> · 2026</span></footer></body></html>

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>决策与开放问题 · Yijie Notes</title><meta name="description" content="区分已确认方向、建议和未决事项。"><meta name="author" content="WANG Yijie"><link rel="canonical" href="https://cityuhk-wyj.github.io/knowledge/decisions.html"><meta property="og:type" content="article"><meta property="og:title" content="决策与开放问题"><meta property="og:description" content="区分已确认方向、建议和未决事项。"><meta property="og:url" content="https://cityuhk-wyj.github.io/knowledge/decisions.html"><link rel="stylesheet" href="../assets/style.css"><link rel="alternate" type="application/rss+xml" title="Yijie Notes" href="../feed.xml"></head><body><a class="skip" href="#main">跳转到正文</a><header><div class="bar"><a class="brand" href="../index.html">YIJIE <span aria-hidden="true">/</span> NOTES</a><nav aria-label="主导航"><a href="../index.html">文章</a><a href="../knowledge/current-state.html">项目状态</a><a href="../llms.txt">LLM 入口</a><a href="https://github.com/CityuHK-wyj">GitHub</a></nav></div></header><main id="main" class="wrap"><div class="article-layout"><aside class="toc" aria-label="文章目录"><strong>本文目录</strong><a href="../index.html">返回全部文章</a></aside><article><div class="eyebrow">PROJECT KNOWLEDGE</div><h1>决策与开放问题</h1><div class="article-meta">项目知识 · 更新 2026-09-07<br><a href="decisions.md">Markdown 原文</a><a href="../llms-full.txt">完整文本</a></div>
+<p>整理日期：2026-09-07。ID 是本次为后续引用新增的文档标识，不代表历史中已使用该编号。</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="可横向滚动的数据表"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>状态</th>
+<th>内容</th>
+<th>依据 / 后续工作</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>D001</td>
+<td>讨论明确</td>
+<td>保留原问题 raw_query 和已确认约束</td>
+<td>S1；防止多轮丢失条件</td>
+</tr>
+<tr>
+<td>D002</td>
+<td>讨论明确</td>
+<td>允许模型写 SQL，并由程序校验</td>
+<td>S1；验证器尚无实现证据</td>
+</tr>
+<tr>
+<td>D003</td>
+<td>历史代码可见</td>
+<td>热库、冷库、联网与姓名反查四工具</td>
+<td>S2；当前仓库未核验</td>
+</tr>
+<tr>
+<td>D004</td>
+<td>讨论明确</td>
+<td>实体歧义可向用户澄清</td>
+<td>S1；ID 代替姓名作为连接依据</td>
+</tr>
+<tr>
+<td>D005</td>
+<td>讨论明确</td>
+<td>任务参数与结果采用标准类型</td>
+<td>S1；具体 schema 待定</td>
+</tr>
+<tr>
+<td>D006</td>
+<td>讨论明确</td>
+<td>任务应记录依赖，计划可根据结果调整</td>
+<td>S1；运行中变更规则待定</td>
+</tr>
+<tr>
+<td>D007</td>
+<td>讨论明确</td>
+<td>数据及 ToolResult 记录来源</td>
+<td>S1；来源继承形式是建议</td>
+</tr>
+<tr>
+<td>D008</td>
+<td>讨论明确</td>
+<td>0 rows 需要分类，不能自动等于完成</td>
+<td>S1；确定错误码和状态</td>
+</tr>
+<tr>
+<td>D009</td>
+<td>讨论明确</td>
+<td>confidence 不足不产出确定结论</td>
+<td>S1；分数与阈值未定</td>
+</tr>
+<tr>
+<td>D010</td>
+<td>用户约束</td>
+<td>避免过细 artifact_id 分类维护成本</td>
+<td>S1；只先做必要引用</td>
+</tr>
+<tr>
+<td>P001</td>
+<td>编辑建议</td>
+<td>计划版本化，运行任务绑定参数快照</td>
+<td>待确认与实现</td>
+</tr>
+<tr>
+<td>P002</td>
+<td>编辑建议</td>
+<td>设置执行预算及非成功结束状态</td>
+<td>避免无限循环，同时保留 D009</td>
+</tr>
+<tr>
+<td>P003</td>
+<td>编辑建议</td>
+<td>语义 fields 与物理字段分层适配</td>
+<td>数据库与 Web 采用不同适配器</td>
+</tr>
+<tr>
+<td>P004</td>
+<td>编辑修正</td>
+<td>不把特殊条件 EV / 薪资当综合价值</td>
+<td>旧原型提示词存在过度推断</td>
+</tr>
+<tr>
+<td>P005</td>
+<td>编辑修正</td>
+<td>薪资时期与问题时期显式对齐</td>
+<td>不将所有查询固定到当前年份</td>
+</tr>
+<tr>
+<td>O001</td>
+<td>待决</td>
+<td>AgentTask / ToolResult 正式定义</td>
+<td>字段类型、可选项、结果引用</td>
+</tr>
+<tr>
+<td>O002</td>
+<td>待决</td>
+<td>检查点持久化</td>
+<td>存储、恢复、一致性、重复调用</td>
+</tr>
+<tr>
+<td>O003</td>
+<td>待决</td>
+<td>confidence 与结果质量评价</td>
+<td>证据标准、阈值、校准</td>
+</tr>
+<tr>
+<td>O004</td>
+<td>待决</td>
+<td>检索和编排技术选型</td>
+<td>先根据具体失败决定</td>
+</tr>
+</tbody></table></div>
+<p>变更时保留旧决策并标记被哪个新决策替代。不要悄悄把建议状态改为已实现。</p>
+<div class="article-foot"><a href="../index.html">全部文章</a></div></article></div></main><footer><span>WANG Yijie · Baseball Agent 开发记录</span><span><a href="../knowledge/sources.html">来源与覆盖范围</a> · <a href="../feed.xml">RSS</a> · 2026</span></footer></body></html>

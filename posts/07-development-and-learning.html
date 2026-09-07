@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>开发环境与学习路径：把能运行的小闭环做扎实 · Yijie Notes</title><meta name="description" content="WSL、Docker、虚拟环境与 Git 的角色，以及从骨架走向可运行代码。"><meta name="author" content="WANG Yijie"><link rel="canonical" href="https://cityuhk-wyj.github.io/posts/07-development-and-learning.html"><meta property="og:type" content="article"><meta property="og:title" content="开发环境与学习路径：把能运行的小闭环做扎实"><meta property="og:description" content="WSL、Docker、虚拟环境与 Git 的角色，以及从骨架走向可运行代码。"><meta property="og:url" content="https://cityuhk-wyj.github.io/posts/07-development-and-learning.html"><link rel="stylesheet" href="../assets/style.css"><link rel="alternate" type="application/rss+xml" title="Yijie Notes" href="../feed.xml"></head><body><a class="skip" href="#main">跳转到正文</a><header><div class="bar"><a class="brand" href="../index.html">YIJIE <span aria-hidden="true">/</span> NOTES</a><nav aria-label="主导航"><a href="../index.html">文章</a><a href="../knowledge/current-state.html">项目状态</a><a href="../llms.txt">LLM 入口</a><a href="https://github.com/CityuHK-wyj">GitHub</a></nav></div></header><main id="main" class="wrap"><div class="article-layout"><aside class="toc" aria-label="文章目录"><strong>本文目录</strong><a href="#section-1">把四个概念分开</a><a href="#section-2">代码、依赖与秘密配置各归其位</a><a href="#section-3">从目录骨架走向一个纵向切片</a><a href="#section-4">学代码时追踪数据如何流动</a><a href="#section-5">吸收外部工作流时保留来源边界</a><a href="../index.html">返回全部文章</a></aside><article><div class="eyebrow">FIELD NOTES / 07</div><h1>开发环境与学习路径：把能运行的小闭环做扎实</h1><div class="article-meta">首发 2026-09-07 · 更新 2026-09-07 · 开发实践<br><a href="07-development-and-learning.md">Markdown 原文</a><a href="../llms-full.txt">完整文本</a></div>
+<p>项目讨论除了架构，也包括 WSL、Docker、虚拟环境、Git 和日常编码方法。这些内容和 Agent 可靠性直接相关：只有运行环境可重复，才知道一次失败来自数据、模型还是环境。</p>
+<p><strong>记录性质：</strong> 历史问题与学习过程回顾，不是当前环境的诊断报告。</p>
+<h2 id="section-1">把四个概念分开</h2>
+<p>Windows 提供桌面环境；WSL Ubuntu 提供 Linux 用户空间；Python 虚拟环境隔离项目依赖；Docker 容器运行数据库等服务。进入 WSL 并不需要自动激活项目虚拟环境，激活虚拟环境也不意味着数据库容器已经启动。</p>
+<p>此前排查发现 shell 启动配置中存在自动 <code>source .../bin/activate</code> 的语句，导致进入 Ubuntu 就看到项目环境。目标是保持 shell 默认启动简洁，在进入项目时显式激活环境。后续还报告过 WSL 启动慢，但可见摘要不足以证明最终根因或修复已经确定。</p>
+<p>镜像是创建容器的基础，启动项目时运行的是已有容器或由镜像创建的新容器，不存在单独“启动镜像”的同等动作。Docker Desktop 与 WSL 内直接安装 Docker 的差异，也提醒项目文档应明确实际采用的管理方式。</p>
+<h2 id="section-2">代码、依赖与秘密配置各归其位</h2>
+<p>Git 管理项目源码与变更记录，虚拟环境通常不应提交。数据库连接、模型凭据和机器专属绝对路径，应从可发布代码中分离。本次博客没有复制历史脚本中的密钥或连接配置。</p>
+<p>HTTP(S) 与 SSH 是访问 Git 仓库的不同通道。历史排查里 HTTPS 读取曾成功，SSH 返回公钥权限失败；它说明两条认证路径状态不同，不能简单归为整个 GitHub 无法访问。这是当时的观察，不是当前网络状态。</p>
+<h2 id="section-3">从目录骨架走向一个纵向切片</h2>
+<p>讨论中的目录设计包含 <code>conversation</code>、<code>semantic</code>、<code>agent</code>、<code>tools</code>、<code>validation</code>、<code>features</code>、<code>formatters</code>、<code>models</code>、<code>data</code> 和 <code>tests</code>。它们提供职责位置，但学习与开发不必按目录逐个填满。</p>
+<p>可以先选一个明确问题：解析一位已确认球员与日期区间，调用一个本地只读工具，验证返回值，输出带来源的结果。等这条链路可运行，再加入别名、跨库、联网与计划修订。</p>
+<p>先验证简单本地问题与最终扩展复杂案例并不冲突。前者减少首次调试变量，后者检验架构是否支持真实需求。</p>
+<h2 id="section-4">学代码时追踪数据如何流动</h2>
+<p>用户在讨论中明确希望获得更多代码逻辑解释，而不只是生成代码。一个有效阅读顺序是：入口接收什么，模型看到了什么，工具参数由谁生成，工具怎样执行，错误怎样返回，程序凭什么停止。</p>
+<p>每实现一个模块，都应能用自己的话回答输入、输出、不变量和失败行为。比起一次接入很多框架，追踪一次真实执行并解释每个中间结果，更能建立独立调试能力。</p>
+<h2 id="section-5">吸收外部工作流时保留来源边界</h2>
+<p>9 月的已有资料整理了 lvyneko 的 Agent 学习与项目经验，并提出先完成最小闭环、用真实失败改进系统、把代码和笔记绑定。这里吸收的是已有二次整理中的方法，尚未在本次发布中重新核验作者网页，也不把这些建议写成项目已执行成果。</p>
+<p>对于个人作品，最有说服力的记录是：原来怎样失败、改了哪一处、用什么证据确认改善，以及仍然不能做什么。博客可以成为这套工程记录的一部分。</p>
+<p><strong>来源：</strong> S1 开发环境与学习偏好摘要；S3 外部工作流二次整理。</p>
+<div class="article-foot"><a href="../index.html">全部文章</a><a href="08-a-blog-for-humans-and-llms.html">下一篇：把聊天变成可更新的项目知识，而不是一份越来越长的摘要</a></div></article></div></main><footer><span>WANG Yijie · Baseball Agent 开发记录</span><span><a href="../knowledge/sources.html">来源与覆盖范围</a> · <a href="../feed.xml">RSS</a> · 2026</span></footer></body></html>

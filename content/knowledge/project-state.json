@@ -1,0 +1,57 @@
+{
+  "project": "baseball_agent",
+  "as_of": "2026-09-07",
+  "coverage": "partial_accessible_sources",
+  "current_repository_verified": false,
+  "implementation_evidence": [
+    {
+      "feature": "four_tool_loop",
+      "status": "historical_source_observed",
+      "source": "S2"
+    },
+    {
+      "feature": "2024_2026_postgresql_2015_2023_parquet",
+      "status": "user_reported_not_audited",
+      "source": "S1"
+    },
+    {
+      "feature": "modular_skeleton",
+      "status": "user_reported_placeholders_in_2026_08",
+      "source": "S1"
+    }
+  ],
+  "confirmed_directions": [
+    "preserve_raw_query_and_confirmed_constraints",
+    "allow_validated_llm_sql",
+    "typed_task_and_tool_result",
+    "explicit_task_dependencies",
+    "entity_disambiguation",
+    "record_data_provenance",
+    "classify_zero_rows",
+    "no_definitive_answer_with_insufficient_evidence",
+    "avoid_overly_granular_manual_artifact_taxonomy"
+  ],
+  "open_questions": [
+    "formal_contract_schema",
+    "task_state_transitions",
+    "in_flight_plan_revision",
+    "checkpoint_storage_and_recovery",
+    "confidence_definition_and_threshold",
+    "execution_budget_and_non_success_exit_states",
+    "retrieval_stack"
+  ],
+  "editorial_proposals": [
+    "versioned_plan_and_execution_snapshot",
+    "typed_non_success_exit_states",
+    "separate_semantic_fields_and_source_bindings",
+    "align_salary_period_and_metric_period"
+  ],
+  "read_first": [
+    "current-state.md",
+    "decisions.md",
+    "sources.md"
+  ],
+  "blog_repository": "https://github.com/CityuHK-wyj/cityuhk-wyj.github.io",
+  "blog_url": "https://cityuhk-wyj.github.io/",
+  "deployment_status_url": "https://github.com/CityuHK-wyj/cityuhk-wyj.github.io/actions"
+}

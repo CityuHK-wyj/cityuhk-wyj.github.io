@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>来源与覆盖范围 · Yijie Notes</title><meta name="description" content="材料来源、已知缺口与公开参考。"><meta name="author" content="WANG Yijie"><link rel="canonical" href="https://cityuhk-wyj.github.io/knowledge/sources.html"><meta property="og:type" content="article"><meta property="og:title" content="来源与覆盖范围"><meta property="og:description" content="材料来源、已知缺口与公开参考。"><meta property="og:url" content="https://cityuhk-wyj.github.io/knowledge/sources.html"><link rel="stylesheet" href="../assets/style.css"><link rel="alternate" type="application/rss+xml" title="Yijie Notes" href="../feed.xml"></head><body><a class="skip" href="#main">跳转到正文</a><header><div class="bar"><a class="brand" href="../index.html">YIJIE <span aria-hidden="true">/</span> NOTES</a><nav aria-label="主导航"><a href="../index.html">文章</a><a href="../knowledge/current-state.html">项目状态</a><a href="../llms.txt">LLM 入口</a><a href="https://github.com/CityuHK-wyj">GitHub</a></nav></div></header><main id="main" class="wrap"><div class="article-layout"><aside class="toc" aria-label="文章目录"><strong>本文目录</strong><a href="#section-1">来源登记</a><a href="#section-2">可识别的讨论线索</a><a href="#section-3">尚未覆盖</a><a href="#section-4">公开参考链接</a><a href="../index.html">返回全部文章</a></aside><article><div class="eyebrow">PROJECT KNOWLEDGE</div><h1>来源与覆盖范围</h1><div class="article-meta">项目知识 · 更新 2026-09-07<br><a href="sources.md">Markdown 原文</a><a href="../llms-full.txt">完整文本</a></div>
+<p>首版整理日期：2026-09-07。本文说明哪些材料被实际读取，哪些仅来自摘要，哪些尚不可访问。</p>
+<h2 id="section-1">来源登记</h2>
+<div class="table-wrap" tabindex="0" role="region" aria-label="可横向滚动的数据表"><table>
+<thead>
+<tr>
+<th>来源 ID</th>
+<th>材料</th>
+<th>获取层级</th>
+<th>可以支持什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>S1</td>
+<td>当前对话提供的 baseball agent 项目记忆与历史讨论摘要</td>
+<td>摘要，非完整聊天</td>
+<td>用户目标、偏好、讨论方向与历史报告状态</td>
+</tr>
+<tr>
+<td>S2</td>
+<td>粘贴的文本 (1).txt，文件日期 2026-06-20</td>
+<td>全文读取，共 251 行</td>
+<td>四工具原型、直接 SQL 执行、联网截取、提示词与循环逻辑</td>
+</tr>
+<tr>
+<td>S3</td>
+<td>lvyneko_agent_workflow.md，整理日期 2026-09-05</td>
+<td>全文读取，共 220 行；已有二次整理</td>
+<td>外部学习方法及向本项目迁移的建议</td>
+</tr>
+<tr>
+<td>S4</td>
+<td>GitHub Pages 官方文档</td>
+<td>2026-09-07 查询</td>
+<td>个人站命名、构建与发布配置</td>
+</tr>
+</tbody></table></div>
+<p>S2 的原始材料含私人配置，本博客只转述项目逻辑，不附原脚本。S3 是模型生成的二次整理，其关于作者的叙述未在本次重新逐项核验；没有将它作为用户已经确认的项目决策。</p>
+<h2 id="section-2">可识别的讨论线索</h2>
+<ul>
+<li>2026-06-20《2025 MLB 季后赛焦点》：复杂两好球、高区快速球问题，以及 SQL 权限、实体绰号与架构整合。</li>
+<li>2026-07-28《数据科学转Agent路径》：任务命名、标准信息格式、参数类型、artifact_id 维护成本、fields 与数据库字段约束。</li>
+<li>2026-08-06 相关开发讨论：项目目录骨架、WSL 项目位置、编码逻辑解释。摘要显示骨架主要是占位符。</li>
+<li>2026-08-31 可检索片段：追问“先做一个能跑通的最小版本”的含义。</li>
+<li>2026-09-03 至 09-04 环境讨论：WSL 自动激活与启动慢、Git 访问、Docker、Redis。只采纳与项目相关的概念和已记录观察。</li>
+<li>2026-09-05 外部学习资料：作为补充阅读方法；不能证明属于本项目内的全部聊天。</li>
+</ul>
+<p>以上日期用于定位来源线索，不表示已逐字核验每条原对话，也不是对项目会话的完整枚举。</p>
+<h2 id="section-3">尚未覆盖</h2>
+<p>未获得项目全部聊天导出；未读取当前 Agent GitHub 仓库；未验证本地数据库；没有完整正式 schema、检查点实现或测试报告。文章中的新增工程方案均标记为建议。</p>
+<p>拿到聊天导出后，应新增来源 ID 和覆盖条目，查找与现有结论冲突或遗漏的内容，再更新文章、状态和决策表。不要把未检索到解释为从未发生。</p>
+<h2 id="section-4">公开参考链接</h2>
+<ul>
+<li><a href="https://docs.github.com/en/pages/quickstart">GitHub Pages 快速入门</a></li>
+<li><a href="https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site">创建 GitHub Pages 站点</a></li>
+<li><a href="https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site">配置 GitHub Pages 发布源</a></li>
+<li><a href="https://github.com/lvy010/X-Plore">已有资料引用的 lvyneko 学习笔记索引</a>（本次未重验）</li>
+</ul>
+<div class="article-foot"><a href="../index.html">全部文章</a></div></article></div></main><footer><span>WANG Yijie · Baseball Agent 开发记录</span><span><a href="../knowledge/sources.html">来源与覆盖范围</a> · <a href="../feed.xml">RSS</a> · 2026</span></footer></body></html>

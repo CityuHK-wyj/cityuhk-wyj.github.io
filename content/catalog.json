@@ -1,0 +1,119 @@
+{
+  "site": {
+    "title": "Yijie · Baseball Agent Notes",
+    "url": "https://cityuhk-wyj.github.io",
+    "description": "棒球分析 Agent 的设计演变、工程实践与可追溯项目知识。",
+    "language": "zh-CN"
+  },
+  "posts": [
+    {
+      "id": "BA-001",
+      "slug": "01-from-data-to-agent",
+      "title": "从棒球数据脚本，到能解释自己结论的 Agent",
+      "description": "从四工具原型回看架构如何形成，以及哪些模块仍停留在设计阶段。",
+      "category": "项目起点",
+      "published": "2026-09-07",
+      "updated": "2026-09-07",
+      "source_ids": [
+        "S1",
+        "S2"
+      ],
+      "file": "posts/01-from-data-to-agent.md"
+    },
+    {
+      "id": "BA-002",
+      "slug": "02-data-and-statistical-grain",
+      "title": "数据层：热库、冷库，以及一行究竟代表什么",
+      "description": "理解 PostgreSQL、Parquet 和数据粒度，避免投球数、打席数与有效样本混淆。",
+      "category": "数据工程",
+      "published": "2026-09-07",
+      "updated": "2026-09-07",
+      "source_ids": [
+        "S1",
+        "S2"
+      ],
+      "file": "posts/02-data-and-statistical-grain.md"
+    },
+    {
+      "id": "BA-003",
+      "slug": "03-entities-and-metrics",
+      "title": "先弄清楚是谁、什么指标，再考虑 SQL",
+      "description": "同名与绰号消歧、指标语义层、Schema RAG，以及 Web 字段如何适配。",
+      "category": "语义理解",
+      "published": "2026-09-07",
+      "updated": "2026-09-07",
+      "source_ids": [
+        "S1"
+      ],
+      "file": "posts/03-entities-and-metrics.md"
+    },
+    {
+      "id": "BA-004",
+      "slug": "04-task-contracts",
+      "title": "Task Planner：任务之间传递什么，才能继续执行",
+      "description": "任务类型、依赖关系、ToolResult、来源与检查点的设计边界。",
+      "category": "任务规划",
+      "published": "2026-09-07",
+      "updated": "2026-09-07",
+      "source_ids": [
+        "S1"
+      ],
+      "file": "posts/04-task-contracts.md"
+    },
+    {
+      "id": "BA-005",
+      "slug": "05-validation-and-feedback",
+      "title": "可靠的 Agent 循环：零行、错误与低置信度",
+      "description": "从只读 SQL 到结果质量，明确何时继续、澄清或报告证据不足。",
+      "category": "可靠性",
+      "published": "2026-09-07",
+      "updated": "2026-09-07",
+      "source_ids": [
+        "S1",
+        "S2",
+        "S3"
+      ],
+      "file": "posts/05-validation-and-feedback.md"
+    },
+    {
+      "id": "BA-006",
+      "slug": "06-complex-query-walkthrough",
+      "title": "拆解一个问题：两好球、高区快速球、击球初速与薪资",
+      "description": "把一个真实需求拆成可验收步骤，保留统计口径和价值判断的边界。",
+      "category": "案例拆解",
+      "published": "2026-09-07",
+      "updated": "2026-09-07",
+      "source_ids": [
+        "S1",
+        "S2",
+        "S3"
+      ],
+      "file": "posts/06-complex-query-walkthrough.md"
+    },
+    {
+      "id": "BA-007",
+      "slug": "07-development-and-learning",
+      "title": "开发环境与学习路径：把能运行的小闭环做扎实",
+      "description": "WSL、Docker、虚拟环境与 Git 的角色，以及从骨架走向可运行代码。",
+      "category": "开发实践",
+      "published": "2026-09-07",
+      "updated": "2026-09-07",
+      "source_ids": [
+        "S1",
+        "S3"
+      ],
+      "file": "posts/07-development-and-learning.md"
+    },
+    {
+      "id": "BA-008",
+      "slug": "08-a-blog-for-humans-and-llms",
+      "title": "把聊天变成可更新的项目知识，而不是一份越来越长的摘要",
+      "description": "用文章、当前状态、决策记录和 Markdown 索引支持长期更新。",
+      "category": "知识维护",
+      "published": "2026-09-07",
+      "updated": "2026-09-07",
+      "source_ids": [],
+      "file": "posts/08-a-blog-for-humans-and-llms.md"
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>可靠的 Agent 循环：零行、错误与低置信度 · Yijie Notes</title><meta name="description" content="从只读 SQL 到结果质量，明确何时继续、澄清或报告证据不足。"><meta name="author" content="WANG Yijie"><link rel="canonical" href="https://cityuhk-wyj.github.io/posts/05-validation-and-feedback.html"><meta property="og:type" content="article"><meta property="og:title" content="可靠的 Agent 循环：零行、错误与低置信度"><meta property="og:description" content="从只读 SQL 到结果质量，明确何时继续、澄清或报告证据不足。"><meta property="og:url" content="https://cityuhk-wyj.github.io/posts/05-validation-and-feedback.html"><link rel="stylesheet" href="../assets/style.css"><link rel="alternate" type="application/rss+xml" title="Yijie Notes" href="../feed.xml"></head><body><a class="skip" href="#main">跳转到正文</a><header><div class="bar"><a class="brand" href="../index.html">YIJIE <span aria-hidden="true">/</span> NOTES</a><nav aria-label="主导航"><a href="../index.html">文章</a><a href="../knowledge/current-state.html">项目状态</a><a href="../llms.txt">LLM 入口</a><a href="https://github.com/CityuHK-wyj">GitHub</a></nav></div></header><main id="main" class="wrap"><div class="article-layout"><aside class="toc" aria-label="文章目录"><strong>本文目录</strong><a href="#section-1">SQL 能写出来，不等于可以执行</a><a href="#section-2">0 rows 是一个待解释的观察</a><a href="#section-3">confidence 应当依赖证据</a><a href="#section-4">不足时停止，也不能伪装成成功</a><a href="#section-5">Formatter 接收已经验证的分析结果</a><a href="../index.html">返回全部文章</a></aside><article><div class="eyebrow">FIELD NOTES / 05</div><h1>可靠的 Agent 循环：零行、错误与低置信度</h1><div class="article-meta">首发 2026-09-07 · 更新 2026-09-07 · 可靠性<br><a href="05-validation-and-feedback.md">Markdown 原文</a><a href="../llms-full.txt">完整文本</a></div>
+<p>项目偏好的工作顺序逐渐明确：先查询相关数据，让模型审阅实际结果，必要时补查 Web，再根据证据决定能否回答。若问题本身就是合同或实时阵容，则应直接路由到合适的联网来源，而不必机械地先查本地。</p>
+<p><strong>记录性质：</strong> 已讨论原则与本次工程建议；没有声称验证器已实现。</p>
+<h2 id="section-1">SQL 能写出来，不等于可以执行</h2>
+<p>项目不希望完全剥夺模型生成 SQL 的能力，因为固定查询模板难以覆盖复杂投球条件。相应地，SQL 的边界需要由程序执行。</p>
+<p>讨论计划使用 sqlglot 做解析与校验。这里要区分语法检查与权限保障：AST 合法不能自动证明访问安全，也不能证明统计正确。只读账号、允许访问的表或路径、超时与结果规模限制，需要由执行层落实。</p>
+<p>历史原型中，数据库工具直接执行传入字符串，冷库工具还通过字符串替换纠正文件路径。它们是早期便利实现，不应作为后续安全验证已经完成的证据。复杂表达式、函数能力和外部路径需要独立控制。</p>
+<h2 id="section-2">0 rows 是一个待解释的观察</h2>
+<div class="table-wrap" tabindex="0" role="region" aria-label="可横向滚动的数据表"><table>
+<thead>
+<tr>
+<th>观察</th>
+<th>可能原因</th>
+<th>下一步</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>有效执行但没有匹配记录</td>
+<td>条件确实无匹配</td>
+<td>核对覆盖范围后报告空集</td>
+</tr>
+<tr>
+<td>对应赛季未加载</td>
+<td>数据缺失</td>
+<td>路由到其他来源或说明不可用</td>
+</tr>
+<tr>
+<td>球员匹配失败</td>
+<td>实体或跨源 ID 错误</td>
+<td>回到实体解析</td>
+</tr>
+<tr>
+<td>资格门槛后全被排除</td>
+<td>样本不足</td>
+<td>展示门槛与限制，修改条件需确认</td>
+</tr>
+<tr>
+<td>查询报错</td>
+<td>SQL、权限或接口失败</td>
+<td>保留错误类型，修复或停止</td>
+</tr>
+</tbody></table></div>
+<p>尤其不能把 API 异常转成空数组，再告诉用户“没有符合条件的球员”。调用失败、未找到和统计上的零是不同状态。</p>
+<h2 id="section-3">confidence 应当依赖证据</h2>
+<p>讨论希望每轮取数后更新 confidence，达到要求再生成报告。尚未确定的是分数的定义、校准方式和阈值。LLM 自报“我有 95% 把握”并不是已校准的可靠性度量。</p>
+<p>本次整理建议先使用可核对的门槛：关键实体是否确认、年份是否完整、口径是否明确、样本是否足够、来源是否有效、必需字段是否齐全。模型可以综合解释这些证据，但不能通过抬高分数掩盖缺失。</p>
+<h2 id="section-4">不足时停止，也不能伪装成成功</h2>
+<p>用户明确反对 confidence 不足时提前输出确定结论。这条原则需要与有界执行同时成立：网络持续失败时，系统不能无限循环。</p>
+<p>建议将结束状态区分为“证据充分的回答”“等待用户澄清”“证据不足的说明”“执行失败”。达到最大步数、时间或成本预算，只能触发后面几种状态，不能把它算作分析成功。这是本次整理提出的实现方案，尚待项目确认。</p>
+<h2 id="section-5">Formatter 接收已经验证的分析结果</h2>
+<p>核心指标由查询或 Feature Engine 计算，形成带口径、样本量、来源和限制的 Analytics JSON。Formatter 负责说明结果与不确定性，不在写作时临时重算另一套排名。</p>
+<p>一份可信报告应能回答：数据来自哪里、截至何时、覆盖什么、排除了什么、结论依赖哪些假设。优美排版不能弥补这些信息的缺失。</p>
+<p><strong>来源：</strong> S1、S2、S3；执行预算与结束状态拆分为本次整理建议。</p>
+<div class="article-foot"><a href="../index.html">全部文章</a><a href="06-complex-query-walkthrough.html">下一篇：拆解一个问题：两好球、高区快速球、击球初速与薪资</a></div></article></div></main><footer><span>WANG Yijie · Baseball Agent 开发记录</span><span><a href="../knowledge/sources.html">来源与覆盖范围</a> · <a href="../feed.xml">RSS</a> · 2026</span></footer></body></html>

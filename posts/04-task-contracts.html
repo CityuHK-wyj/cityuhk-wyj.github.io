@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Task Planner：任务之间传递什么，才能继续执行 · Yijie Notes</title><meta name="description" content="任务类型、依赖关系、ToolResult、来源与检查点的设计边界。"><meta name="author" content="WANG Yijie"><link rel="canonical" href="https://cityuhk-wyj.github.io/posts/04-task-contracts.html"><meta property="og:type" content="article"><meta property="og:title" content="Task Planner：任务之间传递什么，才能继续执行"><meta property="og:description" content="任务类型、依赖关系、ToolResult、来源与检查点的设计边界。"><meta property="og:url" content="https://cityuhk-wyj.github.io/posts/04-task-contracts.html"><link rel="stylesheet" href="../assets/style.css"><link rel="alternate" type="application/rss+xml" title="Yijie Notes" href="../feed.xml"></head><body><a class="skip" href="#main">跳转到正文</a><header><div class="bar"><a class="brand" href="../index.html">YIJIE <span aria-hidden="true">/</span> NOTES</a><nav aria-label="主导航"><a href="../index.html">文章</a><a href="../knowledge/current-state.html">项目状态</a><a href="../llms.txt">LLM 入口</a><a href="https://github.com/CityuHK-wyj">GitHub</a></nav></div></header><main id="main" class="wrap"><div class="article-layout"><aside class="toc" aria-label="文章目录"><strong>本文目录</strong><a href="#section-1">先约定信息格式，再让系统填内容</a><a href="#section-2">一个任务至少需要让执行器知道什么</a><a href="#section-3">依赖图比固定串行流程更适合复杂问题</a><a href="#section-4">ToolResult 应由真实执行器产生</a><a href="#section-5">状态、检查点与未决问题</a><a href="../index.html">返回全部文章</a></aside><article><div class="eyebrow">FIELD NOTES / 04</div><h1>Task Planner：任务之间传递什么，才能继续执行</h1><div class="article-meta">首发 2026-09-07 · 更新 2026-09-07 · 任务规划<br><a href="04-task-contracts.md">Markdown 原文</a><a href="../llms-full.txt">完整文本</a></div>
+<p>一旦问题被拆成多个步骤，最容易丢失的就不再是原始文本，而是步骤之间的约定。上一步查到了哪些球员？年份和筛选条件是否已经固定？下一步应读取哪次查询的结果？一个任务显示“完成”时，究竟完成了什么？</p>
+<p><strong>记录性质：</strong> 设计讨论整理；下面的 JSON 是讲解用草案，不是已落地接口。</p>
+<h2 id="section-1">先约定信息格式，再让系统填内容</h2>
+<p>讨论偏向带类型的参数与标准信息格式：哪些信息必须存在、哪些条件可选，应由合约规定；实际值和工具选择可以由系统与模型协作完成。</p>
+<p>另一个重要约束是避免过度分类。用户担心手工维护细碎的 <code>artifact_id</code> 体系会显著增加维护成本。因而本次整理不把复杂产物分类作为既定要求；首先需要的是能够指向实际执行结果的稳定引用。</p>
+<h2 id="section-2">一个任务至少需要让执行器知道什么</h2>
+<pre><code class="language-json">{
+  &quot;task_id&quot;: &quot;rank_hitters&quot;,
+  &quot;status&quot;: &quot;pending&quot;,
+  &quot;depends_on&quot;: [&quot;resolve_query&quot;],
+  &quot;objective&quot;: &quot;按已确认口径计算打者排名&quot;,
+  &quot;inputs&quot;: {&quot;query_spec_ref&quot;: &quot;resolve_query.output&quot;},
+  &quot;constraints&quot;: {&quot;preserve_confirmed_filters&quot;: true},
+  &quot;expected_output&quot;: {&quot;kind&quot;: &quot;table&quot;, &quot;required_fields&quot;: [&quot;player_id&quot;, &quot;metric_value&quot;, &quot;sample_size&quot;]}
+}
+</code></pre>
+<p>这个示例的重点是依赖、输入、约束和预期结果。任务 ID 用于追踪执行，球员 ID 用于识别实体，两者不应混用。具体字段命名、引用协议和状态枚举需要在编码前定稿。</p>
+<h2 id="section-3">依赖图比固定串行流程更适合复杂问题</h2>
+<p>薪资补查依赖候选球员名单；最终价值讨论依赖排名、薪资和口径检查。模型可以提出依赖关系和执行顺序，程序需要检查任务是否存在、依赖是否成环、所需结果是否已经可用。</p>
+<p>讨论也提出计划需要能够根据实际结果修订。例如某数据源缺失一整段年份，后续取数方式必须改变。但修订“未来任务”与覆写“正在执行的任务”风险不同。</p>
+<p><strong>本次整理建议：</strong> 为计划维护版本；正在执行的任务绑定其启动时的参数快照；变更生成新版本，并明确哪些下游结果失效。这样才能解释某份报告究竟使用了哪组条件。</p>
+<h2 id="section-4">ToolResult 应由真实执行器产生</h2>
+<p>不能让模型凭印象填写查询耗时、返回行数或成功状态。工具调用实际发生后，由适配器记录结果、错误和元数据，再让模型解释它们。</p>
+<p>建议的最小结果信息包括：任务关联、调用状态、数据或数据引用、错误类型、行数、覆盖范围、来源、获取时间、口径和警告。表格、文档片段和 API 对象可以有不同 payload，但外层执行语义应一致。</p>
+<p>用户还要求每条数据记录来源，同时 ToolResult 本身也保存来源。可以用结果级默认来源加记录级或字段级覆盖来减少重复；具体存储形式仍待设计。</p>
+<h2 id="section-5">状态、检查点与未决问题</h2>
+<p>“工具成功”只表示调用完成，未必表示任务目标已经满足。返回空集、缺少必填字段或样本不足时，都需要进一步判断。</p>
+<p>检查点至少应让系统恢复原问题、已确认约束、计划版本、各任务状态、有效结果引用和未解决缺口。保存格式、数据库选择、恢复时如何避免重复调用，尚无正式实现证据。下一次讨论应先确定这些语义，再决定用什么编排框架。</p>
+<p><strong>来源：</strong> S1。JSON、版本化方式与来源继承方式均为本次整理建议。</p>
+<div class="article-foot"><a href="../index.html">全部文章</a><a href="05-validation-and-feedback.html">下一篇：可靠的 Agent 循环：零行、错误与低置信度</a></div></article></div></main><footer><span>WANG Yijie · Baseball Agent 开发记录</span><span><a href="../knowledge/sources.html">来源与覆盖范围</a> · <a href="../feed.xml">RSS</a> · 2026</span></footer></body></html>

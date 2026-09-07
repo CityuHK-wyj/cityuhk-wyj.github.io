@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>数据层：热库、冷库，以及一行究竟代表什么 · Yijie Notes</title><meta name="description" content="理解 PostgreSQL、Parquet 和数据粒度，避免投球数、打席数与有效样本混淆。"><meta name="author" content="WANG Yijie"><link rel="canonical" href="https://cityuhk-wyj.github.io/posts/02-data-and-statistical-grain.html"><meta property="og:type" content="article"><meta property="og:title" content="数据层：热库、冷库，以及一行究竟代表什么"><meta property="og:description" content="理解 PostgreSQL、Parquet 和数据粒度，避免投球数、打席数与有效样本混淆。"><meta property="og:url" content="https://cityuhk-wyj.github.io/posts/02-data-and-statistical-grain.html"><link rel="stylesheet" href="../assets/style.css"><link rel="alternate" type="application/rss+xml" title="Yijie Notes" href="../feed.xml"></head><body><a class="skip" href="#main">跳转到正文</a><header><div class="bar"><a class="brand" href="../index.html">YIJIE <span aria-hidden="true">/</span> NOTES</a><nav aria-label="主导航"><a href="../index.html">文章</a><a href="../knowledge/current-state.html">项目状态</a><a href="../llms.txt">LLM 入口</a><a href="https://github.com/CityuHK-wyj">GitHub</a></nav></div></header><main id="main" class="wrap"><div class="article-layout"><aside class="toc" aria-label="文章目录"><strong>本文目录</strong><a href="#section-1">为什么同时保留 PostgreSQL 和 Parquet</a><a href="#section-2">一颗投球不等于一个打席</a><a href="#section-3">原始流水与快照各有角色</a><a href="#section-4">数据空白与历史指标</a><a href="../index.html">返回全部文章</a></aside><article><div class="eyebrow">FIELD NOTES / 02</div><h1>数据层：热库、冷库，以及一行究竟代表什么</h1><div class="article-meta">首发 2026-09-07 · 更新 2026-09-07 · 数据工程<br><a href="02-data-and-statistical-grain.md">Markdown 原文</a><a href="../llms-full.txt">完整文本</a></div>
+<p>项目已经积累了两类本地历史数据：讨论中报告 2024–2026 年 Statcast 存入 PostgreSQL，2015–2023 年存为 Parquet。这个分层是当时的数据布局，不能直接推导为任何时刻都完整、最新的覆盖承诺。</p>
+<p><strong>记录性质：</strong> 历史设计与代码回顾；文中的实现改进为本次整理建议。</p>
+<h2 id="section-1">为什么同时保留 PostgreSQL 和 Parquet</h2>
+<p>PostgreSQL 适合承载近期数据、球员字典和频繁查询；Parquet 保留历史明细，DuckDB 提供对这些文件的 SQL 分析入口。它们解决的是不同访问需求，不需要把全部历史数据反复搬进同一个数据库。</p>
+<p>跨年度查询需要先检查覆盖范围，再拆分执行与合并。例如 2023–2024 的问题会跨冷、热两层。合并时要统一字段类型和统计口径，避免重复边界数据。平均值不能直接平均：应合并有效值总和与有效样本数后再计算。</p>
+<p><strong>建议增加覆盖清单：</strong> 为每份数据记录赛季、日期上下界、数据粒度、可用字段、最后更新时间、缺失说明和数据版本。Router 应依据清单选择数据源，不能只依赖提示词里的年份分界。</p>
+<h2 id="section-2">一颗投球不等于一个打席</h2>
+<p>历史工具说明明确指出：<code>statcast_pitches</code> 的一行是一颗投球。于是 <code>COUNT(*)</code> 统计的是保留下来的投球记录数，不能直接当作 PA。</p>
+<p>原型用比赛 ID 与打席序号组成键来计数不同打席。这个规则很有用，但仍需要一个限定：当输入已筛选为某种球速或区域时，计算出来的是“包含这些投球的不同打席数量”。它并不会自动等于标准官方 PA，更不会代表球员整个赛季的 PA。若包含未完成打席，还需要进一步处理。</p>
+<p>同样，统计 <code>events = &#39;home_run&#39;</code> 的记录数，需要确定数据没有重复入库，并确认事件出现在打席结束记录上的方式。一个字段名不能替代对数据粒度的理解。</p>
+<h2 id="section-3">原始流水与快照各有角色</h2>
+<p>项目曾使用打击汇总快照，后来更重视逐球数据与 SQL 聚合，因为任意日期、球数、球速和区域条件都难以由固定快照覆盖。球员字典用于连接可读姓名与稳定 ID。</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="可横向滚动的数据表"><table>
+<thead>
+<tr>
+<th>数据</th>
+<th>适合回答</th>
+<th>需要注意</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>逐球明细</td>
+<td>特定 count、球种、区域下的表现</td>
+<td>投球、打席、击球事件粒度不同</td>
+</tr>
+<tr>
+<td>打席事件</td>
+<td>PA 结果与基础打击统计</td>
+<td>打席完整性、重复记录</td>
+</tr>
+<tr>
+<td>赛季快照</td>
+<td>已发布高阶指标与赛季榜单</td>
+<td>获取时间、指标定义和资格标准</td>
+</tr>
+<tr>
+<td>球员字典</td>
+<td>ID 与姓名映射</td>
+<td>多来源 ID、角色与同名</td>
+</tr>
+<tr>
+<td>新闻与合同</td>
+<td>阵容、伤病、薪资背景</td>
+<td>日期、时效性、原始来源</td>
+</tr>
+</tbody></table></div>
+<p>曾出现快照表缺少查询所用字段、姓名反查结果混入投手等问题。它们说明“脚本预期的 schema”与“真实数据库 schema”必须核对，不能让模型按记忆补字段。</p>
+<h2 id="section-4">数据空白与历史指标</h2>
+<p>历史年份可能缺少某些指标或有效测量值。查询时必须区分列不存在、列存在但为 NULL、字段只覆盖部分事件，以及筛选条件导致没有结果。</p>
+<p>原型还要求 WAR、wRC+ 等复杂高阶指标优先读取已发布数据，因为当前本地数据缺少必要的完整输入。这个限制属于项目数据条件，并不意味着这些指标在数学上永远不能本地计算。只有在输入、定义和版本都齐全后，才有条件讨论可靠复算。</p>
+<p>任何时候都不能把缺失值当作零，也不能把联网失败包装成统计事实。</p>
+<p><strong>来源：</strong> S1、S2；统计口径澄清与覆盖清单为本次编辑建议。</p>
+<div class="article-foot"><a href="../index.html">全部文章</a><a href="03-entities-and-metrics.html">下一篇：先弄清楚是谁、什么指标，再考虑 SQL</a></div></article></div></main><footer><span>WANG Yijie · Baseball Agent 开发记录</span><span><a href="../knowledge/sources.html">来源与覆盖范围</a> · <a href="../feed.xml">RSS</a> · 2026</span></footer></body></html>

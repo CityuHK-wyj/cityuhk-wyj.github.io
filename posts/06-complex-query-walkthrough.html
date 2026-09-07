@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>拆解一个问题：两好球、高区快速球、击球初速与薪资 · Yijie Notes</title><meta name="description" content="把一个真实需求拆成可验收步骤，保留统计口径和价值判断的边界。"><meta name="author" content="WANG Yijie"><link rel="canonical" href="https://cityuhk-wyj.github.io/posts/06-complex-query-walkthrough.html"><meta property="og:type" content="article"><meta property="og:title" content="拆解一个问题：两好球、高区快速球、击球初速与薪资"><meta property="og:description" content="把一个真实需求拆成可验收步骤，保留统计口径和价值判断的边界。"><meta property="og:url" content="https://cityuhk-wyj.github.io/posts/06-complex-query-walkthrough.html"><link rel="stylesheet" href="../assets/style.css"><link rel="alternate" type="application/rss+xml" title="Yijie Notes" href="../feed.xml"></head><body><a class="skip" href="#main">跳转到正文</a><header><div class="bar"><a class="brand" href="../index.html">YIJIE <span aria-hidden="true">/</span> NOTES</a><nav aria-label="主导航"><a href="../index.html">文章</a><a href="../knowledge/current-state.html">项目状态</a><a href="../llms.txt">LLM 入口</a><a href="https://github.com/CityuHK-wyj">GitHub</a></nav></div></header><main id="main" class="wrap"><div class="article-layout"><aside class="toc" aria-label="文章目录"><strong>本文目录</strong><a href="#section-1">第一步：冻结问题口径</a><a href="#section-2">第二步：分清筛选投球与计算样本</a><a href="#section-3">第三步：排名完成后再补身份与薪资</a><a href="#section-4">第四步：防止把一个比值写成综合价值</a><a href="#section-5">第五步：验收完整链路</a><a href="../index.html">返回全部文章</a></aside><article><div class="eyebrow">FIELD NOTES / 06</div><h1>拆解一个问题：两好球、高区快速球、击球初速与薪资</h1><div class="article-meta">首发 2026-09-07 · 更新 2026-09-07 · 案例拆解<br><a href="06-complex-query-walkthrough.md">Markdown 原文</a><a href="../llms-full.txt">完整文本</a></div>
+<p>本篇把贯穿项目的复杂问题写成一条可验收的分析路径。它是一份设计演练，<strong>没有执行最新数据查询，也不提供真实球员排名或薪资结果</strong>。</p>
+<h2 id="section-1">第一步：冻结问题口径</h2>
+<div class="table-wrap" tabindex="0" role="region" aria-label="可横向滚动的数据表"><table>
+<thead>
+<tr>
+<th>用户表达</th>
+<th>需要明确的条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2025–2026</td>
+<td>常规赛或包含季后赛；2026 数据截止日</td>
+</tr>
+<tr>
+<td>两好球之后</td>
+<td>投球前 strikes = 2，对应 0–2、1–2、2–2</td>
+</tr>
+<tr>
+<td>大于 95 mph</td>
+<td>严格大于，不能改为大于等于</td>
+</tr>
+<tr>
+<td>高区快速球</td>
+<td>球种集合；九宫格上排还是按打者好球带相对高度</td>
+</tr>
+<tr>
+<td>初速最高</td>
+<td>平均 EV 还是单次最大 EV</td>
+</tr>
+<tr>
+<td>前五名</td>
+<td>有效击球样本门槛、并列处理、不足五人时如何报告</td>
+</tr>
+<tr>
+<td>薪资与性价比</td>
+<td>赛季、币种、现金收入或 AAV 等薪资口径</td>
+</tr>
+</tbody></table></div>
+<p>原始问题里提到九宫格上边缘，实施时应优先延续这项约束，并核对实际区域编码。不能在生成 SQL 时换成另一种“高区”定义。</p>
+<h2 id="section-2">第二步：分清筛选投球与计算样本</h2>
+<p>先从逐球数据筛出符合 count、球种、球速和区域条件的投球；再根据 EV 指标定义选择具有有效测量值的击球事件。挥空或界外等事件是否进入样本，需要按已确认的指标口径处理，不能靠 <code>launch_speed IS NOT NULL</code> 这一条件替代所有语义判断。</p>
+<p>假设用户确认按符合条件击球事件的平均 EV 排名，则对每位球员保留 EV 总和、有效样本数和平均值。资格筛选针对这个条件下的有效样本，而全季 qualified 标准可以作为额外条件，二者不能相互替代。</p>
+<h2 id="section-3">第三步：排名完成后再补身份与薪资</h2>
+<p>本地结果保留稳定球员 ID、年份、指标值、有效样本数和过滤条件。姓名字典用于展示；薪资网站如果采用另一套 ID，需要显式映射与验证。</p>
+<p>历史提示词曾要求使用“当前 2026 年薪资”。对跨年分析而言，这条规则需要改进：查询什么赛季，就明确对应哪个薪资时期；若使用当前合同讨论未来价值，应在报告中单独说明，而不能默默把两年表现除以一年薪资。</p>
+<h2 id="section-4">第四步：防止把一个比值写成综合价值</h2>
+<p>早期原型已经反对“总 EV / 年薪”“总 wOBA / 年薪”这类机械归一化，但又提出可以用“EV 超过联盟均值的部分”比较年薪。后者也只能描述某种自定义比值，不能自动代表球队价值。</p>
+<p>这个问题只覆盖特定对球条件下的击球表现，无法直接代表全部进攻、防守、跑垒、出勤和未来贡献。即使引入 WAR 与薪资，也需要交代时期、指标来源、合同结构和分析目标。</p>
+<p>因此，第一版更稳妥的输出是并列展示条件内表现、样本与薪资，再写有限的判断；如需综合性价比排名，应另行确认评价方法。这里对旧提示词的修正属于本次编辑建议。</p>
+<h2 id="section-5">第五步：验收完整链路</h2>
+<p>这条案例可以逐步扩展：先固定赛季与条件验证本地排名，再接入实体映射和薪资，最后加入缺失处理与反馈循环。每一步都留下结构化产物和来源，以便定位失败。</p>
+<p>关键回归情形包括：不足五名合格球员、跨冷/热库年份、同名球员、缺少 EV、薪资无日期、接口报错、0 rows，以及筛选条件在计划修订中被意外改变。完成标准是这些情形能得到准确解释，而不只是正常示例能返回一张表。</p>
+<p><strong>来源：</strong> S1 中的原始复杂查询；S2 薪资提示词；S3 的纵向切片建议。本文的口径澄清与价值分析限制为编辑性修正。</p>
+<div class="article-foot"><a href="../index.html">全部文章</a><a href="07-development-and-learning.html">下一篇：开发环境与学习路径：把能运行的小闭环做扎实</a></div></article></div></main><footer><span>WANG Yijie · Baseball Agent 开发记录</span><span><a href="../knowledge/sources.html">来源与覆盖范围</a> · <a href="../feed.xml">RSS</a> · 2026</span></footer></body></html>
