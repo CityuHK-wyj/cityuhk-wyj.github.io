@@ -1,7 +1,7 @@
 {
   "project": "baseball_agent",
-  "as_of": "2026-09-07",
-  "coverage": "partial_accessible_sources",
+  "as_of": "2026-09-10",
+  "coverage": "partial_accessible_sources_plus_current_architecture_discussion",
   "current_repository_verified": false,
   "implementation_evidence": [
     {
@@ -15,46 +15,58 @@
       "source": "S1"
     },
     {
-      "feature": "modular_skeleton",
-      "status": "user_reported_placeholders_in_2026_08",
+      "feature": "modular_architecture_scaffold",
+      "status": "user_reported_not_audited",
       "source": "S1"
     }
   ],
   "confirmed_directions": [
     "preserve_raw_query_and_confirmed_constraints",
-    "allow_validated_llm_sql",
-    "typed_task_and_tool_result",
-    "explicit_task_dependencies",
-    "entity_disambiguation",
-    "record_data_provenance",
-    "classify_zero_rows",
-    "no_definitive_answer_with_insufficient_evidence",
-    "avoid_overly_granular_manual_artifact_taxonomy"
+    "multi_intent_but_intent_not_tool",
+    "canonical_entity_identity_before_planner",
+    "typed_constraint_as_shared_query_language",
+    "plan_execution_attempt_separation",
+    "preserve_task_attempt_history",
+    "technical_retry_vs_semantic_replan",
+    "artifact_requirement_for_data_dependency",
+    "avoid_overly_granular_manual_artifact_taxonomy",
+    "semantic_requirement_separate_from_physical_schema",
+    "tool_execution_status_separate_from_business_result_status",
+    "retryable_tool_level_recoverable_agent_level",
+    "record_tool_and_data_provenance",
+    "raw_web_result_then_evidence_extraction",
+    "agent_state_separate_from_llm_context_view",
+    "candidate_data_requires_quality_gate",
+    "analysis_sufficiency_loop_with_limited_exit",
+    "metric_definition_plus_source_mapping",
+    "direct_calculated_or_no_mapping",
+    "metric_registry_for_execution_rag_for_semantics"
   ],
   "open_questions": [
-    "formal_contract_schema",
-    "task_state_transitions",
-    "in_flight_plan_revision",
+    "artifact_requirement_and_data_artifact_schema",
+    "quality_requirement_schema",
+    "analysis_sufficiency_definition_and_threshold",
+    "planner_metric_registry_interface",
     "checkpoint_storage_and_recovery",
-    "confidence_definition_and_threshold",
-    "execution_budget_and_non_success_exit_states",
-    "retrieval_stack"
+    "retry_replan_total_step_budgets",
+    "evidence_validation_policy",
+    "langgraph_adoption_timing"
   ],
   "editorial_proposals": [
-    "versioned_plan_and_execution_snapshot",
-    "typed_non_success_exit_states",
-    "separate_semantic_fields_and_source_bindings",
-    "align_salary_period_and_metric_period"
+    "versioned_plan_or_execution_snapshots",
+    "artifact_match_status_satisfied_partial_missing",
+    "retain_raw_web_source_and_structured_evidence",
+    "only_send_projected_validated_state_to_llm"
   ],
   "read_first": [
     "current-state.md",
     "decisions.md",
-    "sources.md"
+    "sources.md",
+    "../posts/09-planning-artifacts-and-evidence.md"
   ],
   "blog_repository": "https://github.com/CityuHK-wyj/cityuhk-wyj.github.io",
   "blog_url": "https://cityuhk-wyj.github.io/",
   "deployment_status_url": "https://github.com/CityuHK-wyj/cityuhk-wyj.github.io/actions",
   "blog_deployed": true,
-  "last_deployment_status": "success",
-  "last_deployment_verified_at": "2026-09-07T02:48:37Z"
+  "last_content_update": "2026-09-10"
 }
