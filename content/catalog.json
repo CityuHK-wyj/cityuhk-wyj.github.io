@@ -14,10 +14,7 @@
       "category": "项目起点",
       "published": "2026-09-07",
       "updated": "2026-09-07",
-      "source_ids": [
-        "S1",
-        "S2"
-      ],
+      "source_ids": ["S1", "S2"],
       "file": "posts/01-from-data-to-agent.md"
     },
     {
@@ -28,10 +25,7 @@
       "category": "数据工程",
       "published": "2026-09-07",
       "updated": "2026-09-07",
-      "source_ids": [
-        "S1",
-        "S2"
-      ],
+      "source_ids": ["S1", "S2"],
       "file": "posts/02-data-and-statistical-grain.md"
     },
     {
@@ -42,9 +36,7 @@
       "category": "语义理解",
       "published": "2026-09-07",
       "updated": "2026-09-07",
-      "source_ids": [
-        "S1"
-      ],
+      "source_ids": ["S1"],
       "file": "posts/03-entities-and-metrics.md"
     },
     {
@@ -55,9 +47,7 @@
       "category": "任务规划",
       "published": "2026-09-07",
       "updated": "2026-09-07",
-      "source_ids": [
-        "S1"
-      ],
+      "source_ids": ["S1"],
       "file": "posts/04-task-contracts.md"
     },
     {
@@ -68,11 +58,7 @@
       "category": "可靠性",
       "published": "2026-09-07",
       "updated": "2026-09-07",
-      "source_ids": [
-        "S1",
-        "S2",
-        "S3"
-      ],
+      "source_ids": ["S1", "S2", "S3"],
       "file": "posts/05-validation-and-feedback.md"
     },
     {
@@ -83,11 +69,7 @@
       "category": "案例拆解",
       "published": "2026-09-07",
       "updated": "2026-09-07",
-      "source_ids": [
-        "S1",
-        "S2",
-        "S3"
-      ],
+      "source_ids": ["S1", "S2", "S3"],
       "file": "posts/06-complex-query-walkthrough.md"
     },
     {
@@ -98,10 +80,7 @@
       "category": "开发实践",
       "published": "2026-09-07",
       "updated": "2026-09-07",
-      "source_ids": [
-        "S1",
-        "S3"
-      ],
+      "source_ids": ["S1", "S3"],
       "file": "posts/07-development-and-learning.md"
     },
     {
@@ -114,6 +93,17 @@
       "updated": "2026-09-07",
       "source_ids": [],
       "file": "posts/08-a-blog-for-humans-and-llms.md"
+    },
+    {
+      "id": "BA-009",
+      "slug": "09-planning-artifacts-and-evidence",
+      "title": "Task Planner 再收敛：依赖数据，而不是依赖字符串",
+      "description": "从 TaskExecution、checkpoint 与 artifact requirement，到 Metric Registry、RAG 和 Web Evidence 的职责边界。",
+      "category": "任务规划",
+      "published": "2026-09-10",
+      "updated": "2026-09-10",
+      "source_ids": ["S5"],
+      "file": "posts/09-planning-artifacts-and-evidence.md"
     }
   ]
 }
