@@ -10,11 +10,11 @@
       "id": "BA-001",
       "slug": "01-from-data-to-agent",
       "title": "从棒球数据脚本，到能解释自己结论的 Agent",
-      "description": "从四工具原型回看架构如何形成，以及哪些模块仍停留在设计阶段。",
+      "description": "从四工具原型回看架构如何形成，并用 Main Flow、Shared Knowledge、Runtime & Governance 三类重新组织整体架构。",
       "category": "项目起点",
       "published": "2026-09-07",
-      "updated": "2026-09-07",
-      "source_ids": ["S1", "S2"],
+      "updated": "2026-09-11",
+      "source_ids": ["S1", "S2", "S5"],
       "file": "posts/01-from-data-to-agent.md"
     },
     {
@@ -43,22 +43,22 @@
       "id": "BA-004",
       "slug": "04-task-contracts",
       "title": "Task Planner：任务之间传递什么，才能继续执行",
-      "description": "任务类型、依赖关系、ToolResult、来源与检查点的设计边界。",
+      "description": "从 AnalysisObjective 到 ArtifactRequirement、AgentTask、TaskExecution 与 checkpoint 的职责边界。",
       "category": "任务规划",
       "published": "2026-09-07",
-      "updated": "2026-09-07",
-      "source_ids": ["S1"],
+      "updated": "2026-09-11",
+      "source_ids": ["S1", "S5"],
       "file": "posts/04-task-contracts.md"
     },
     {
       "id": "BA-005",
       "slug": "05-validation-and-feedback",
       "title": "可靠的 Agent 循环：零行、错误与低置信度",
-      "description": "从只读 SQL 到结果质量，明确何时继续、澄清或报告证据不足。",
+      "description": "把 Validation 作为横切治理能力，并用 Candidate/Approved、Judge Agent 与 Objective Sufficiency 控制结果质量。",
       "category": "可靠性",
       "published": "2026-09-07",
-      "updated": "2026-09-07",
-      "source_ids": ["S1", "S2", "S3"],
+      "updated": "2026-09-11",
+      "source_ids": ["S1", "S2", "S3", "S5"],
       "file": "posts/05-validation-and-feedback.md"
     },
     {
@@ -97,11 +97,11 @@
     {
       "id": "BA-009",
       "slug": "09-planning-artifacts-and-evidence",
-      "title": "Task Planner 再收敛：依赖数据，而不是依赖字符串",
-      "description": "从 TaskExecution、checkpoint 与 artifact requirement，到 Metric Registry、RAG 和 Web Evidence 的职责边界。",
+      "title": "Task Planner 与证据质量：从数据依赖到分层 Agent 架构",
+      "description": "从 Objective、ArtifactRequirement、Judge Agent 与 Objective Sufficiency，到 Main Flow、Shared Knowledge、Runtime & Governance 的总体架构。",
       "category": "任务规划",
       "published": "2026-09-10",
-      "updated": "2026-09-10",
+      "updated": "2026-09-11",
       "source_ids": ["S5"],
       "file": "posts/09-planning-artifacts-and-evidence.md"
     }
