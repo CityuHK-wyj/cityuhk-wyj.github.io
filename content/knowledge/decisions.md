@@ -36,16 +36,37 @@
 | D030 | 讨论明确 | 已完成 Objective 可冻结和复用，未完成部分继续 re-plan；Query 允许 PARTIAL 结果 | S5；支持部分问题先可靠回答 |
 | D031 | 讨论明确 | 总体架构分 Main Agent Flow、Shared Knowledge Services、Runtime & Governance 三类 | S5；避免把 RAG、Registry、Validation、AgentState 误画成线性节点 |
 | D032 | 讨论明确 | Validation / Policy 是 cross-cutting governance | S5；覆盖输入、语义、计划、SQL/tool、Artifact 与最终 claim |
+| D033 | 讨论明确 | 从更高层将主流程压缩为 Interaction、Normalization、Planning & Orchestration、Data & Tool、Evaluation & Sufficiency、Response 六个大层 | S5；Architecture Layer 不等于 Python package |
+| D034 | 讨论明确 | 增加 Requirement Decomposer 窄职责 Sub-agent，在 Planner 前利用 Shared Knowledge 把 Objective 拆成 semantic-atomic ArtifactRequirement | S5；不选 Tool，不因 source 不便删除用户需求 |
+| D035 | 讨论明确 | Requirement 的 base_criticality 是语义重要性，原则上近似 immutable | S5；执行优先级可变，但不能通过降级关键 Requirement 伪造 COMPLETE |
+| D036 | 讨论明确 | ArtifactRequirement 与实际 Artifact 共用统一 ArtifactDescriptor / ArtifactType / canonical semantic keys | S5；Requirement = what we need，Artifact = what we have |
+| D037 | 讨论明确 | Feature Engine 的确定性计算结果也进入统一 Artifact 体系，并通过 derived_from 保留 data lineage | S5；避免每层产生私有结果格式 |
+| D038 | 讨论明确 | QualificationRule 与 SampleAdequacyRule 分离 | S5；前者决定 eligibility，后者决定样本能否支撑结论 |
+| D039 | 讨论明确 | 赛季中的 qualification 需要独立 League/Reference Context，official season progress 与 local ingestion coverage 分开 | S5；避免用数据库最大日期代替真实赛季进度 |
+| D040 | 讨论明确 | Planner 可以给 source preference；Router 是并列但更窄的 Routing Agent，负责实际 source/tool selection | S5；Router 可推翻 preference，但不能绕过 constraint / policy |
+| D041 | 讨论明确 | Orchestrator 是工作流管理者，不是领域专家 | S5；负责调度、状态、权限、预算、阻塞、用户升级和 replan timing |
+| D042 | 讨论明确 | Re-planning 使用同一个 Planning Agent 的 REVISE_PLAN 模式，不单设第二个 Replanner | S5；Orchestrator 决定 when，Planner 决定 what，Router 决定 where/how |
+| D043 | 讨论明确 | Runtime State 拆成多个独立 State Domain，而不是一个巨大 AgentState dict | S5；Query/Objective/Planning/Routing/Execution/Artifact/Interaction/Permission/Budget 等保持相同设计思想 |
+| D044 | 讨论明确 | State 更新采用 Local ownership + reviewed global transition | S5；Sub-agent 可写自己的 Local State，跨 Domain 变化由 Orchestrator 审阅 |
+| D045 | 讨论明确 | 用户需求本身不明确时必须 clarification，并优先提供少量选项供用户选择 | S5；模型可推荐但不能替用户决定问题含义 |
+| D046 | 讨论明确 | 问题明确后，免费且允许的数据源 fallback 可自主进行；付费 / 高成本 source 才升级询问用户 | S5；减少不必要打断，同时保留成本授权 |
+| D047 | 用户约束 | PostgreSQL、DuckDB / Parquet 在 Agent Runtime 中为只读资源；修改属于 System Administrator 权限，用户不能对话授权越界 | S5；应由 SQL AST + sandbox / read-only policy 强制 |
+| D048 | 讨论明确 | Artifact quality 是绑定 Objective / Requirement 的 contextual ArtifactAssessment；Artifact Registry 管理但不充当质量裁判 | S5；同一 Artifact 对不同问题可有不同适用性 |
+| D049 | 讨论明确 | Objective Sufficiency 先做 Critical Requirement hard gate，再做 weighted requirement coverage | S5；低重要性证据不能平均掉核心缺口 |
+| D050 | 讨论明确 | Objective COMPLETE 可以保留 optional_gaps / limitations 并反馈用户 | S5；COMPLETE 表示核心问题可回答，不代表所有信息完美齐全 |
 | P001 | 编辑建议 | 为 plan / execution 增加版本或快照机制 | 便于 checkpoint 与审计，具体实现待定 |
 | P002 | 编辑建议 | 设置 MAX_RETRIES、MAX_REPLANS、MAX_TOTAL_STEPS | 避免无限循环，同时保留 D019 |
-| P003 | 编辑建议 | 为 Artifact Store 设计 SATISFIED / PARTIAL / MISSING 匹配结果 | 支持复用与部分覆盖 |
+| P003 | 编辑建议 | Requirement Matcher 返回 SATISFIED / PARTIAL / MISSING 或等价状态 | 支持 Artifact 复用、组合满足与部分覆盖 |
 | P004 | 编辑建议 | Evidence 保留 raw source 与 structured extraction 两层 | 支持引用、debug 与幻觉检查 |
-| O001 | 待决 | AnalysisObjective / ObjectivePlan / ArtifactRequirement / DataArtifact 正式 schema | 进入 Domain Modeling 后定稿 |
+| P005 | 编辑建议 | Sub-agent Report 使用共享 envelope，再由 PlannerReport / RoutingReport / JudgeReport 扩展 | 支持 Orchestrator 统一审阅 |
+| O001 | 待决 | ArtifactDescriptor / ArtifactRequirement / Artifact / payload subtype 正式 schema | 进入 Domain Modeling 后定稿 |
 | O002 | 待决 | checkpoint 持久化 | 存储、恢复、一致性、重复调用 |
-| O003 | 待决 | Artifact 与 Objective sufficiency 的具体计算、权重与阈值 | code validation、Judge signal、required/optional requirement |
-| O004 | 待决 | Planner 如何消费 MetricDefinition / SourceMapping | 输入上下文大小、查询接口、工具选择边界 |
+| O003 | 待决 | Critical gate、weighted coverage 与 ObjectiveState transition 的具体算法 | code validation、Judge signal、required/optional requirement |
+| O004 | 待决 | Planner / Router 如何消费 MetricDefinition、SourceMapping 与 available capabilities | 输入上下文、查询接口、模型/规则边界 |
 | O005 | 待决 | Judge / Evidence validation 输入输出与来源质量策略 | 结构化事实、报道、观点、冲突证据的处理 |
 | O006 | 待决 | LangGraph 引入时机 | 先跑通手工状态机，再评估迁移价值 |
-| O007 | 待决 | Objective priority policy 的默认表与动态调整规则 | base/effective priority、tool budget、partial answer |
+| O007 | 待决 | QualificationRule / SampleAdequacyRule / LeagueStateSnapshot 正式契约 | 动态 threshold、sample unit、coverage、source freshness |
+| O008 | 待决 | State Domain / StateTransition / AgentReport 统一契约 | ownership、version、transition reason、并发与审阅 |
+| O009 | 待决 | Permission / Cost policy 的正式等级与 Orchestrator escalation contract | 免费、付费、高成本、system-admin-only |
 
 变更时保留旧决策并标记被哪个新决策替代。不要悄悄把讨论方案或编辑建议写成“当前已实现”。
