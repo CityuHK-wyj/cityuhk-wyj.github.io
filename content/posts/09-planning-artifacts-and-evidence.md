@@ -1,111 +1,256 @@
-# Task Planner 再收敛：依赖数据，而不是依赖字符串
+# Task Planner 与证据质量：从数据依赖到分层 Agent 架构
 
-这一轮讨论把 Task Planner 从“让 LLM 排任务顺序”进一步收敛成了一个更可执行的方案：任务需要有依赖，但依赖不应主要绑死在某个 task_id 上，而应描述后续步骤真正需要的数据；工具返回执行事实，Planner 只在语义性问题出现时重新规划。
+这一轮讨论最重要的变化，不是再增加更多模块，而是把已有模块重新放到正确的位置：哪些属于一次请求的主执行链，哪些应该作为多个阶段共享的知识服务，哪些必须贯穿整个 Agent 生命周期。这样可以保留原有功能，同时避免把 RAG、Validation、AgentState 等横向能力误画成只执行一次的线性步骤。
 
-**记录性质：** 以下是 2026-09-10 前讨论确认的设计方向，尚不代表 Agent 仓库已经实现这些接口。
+**记录性质：** 以下是截至 2026-09-11 当前讨论确认的设计方向，尚不代表 Agent 仓库已经实现这些接口。
 
-## 1. Plan 与 Execution 分离
+## 1. 架构分成三类，而不是一条超长流水线
 
-`AgentTask` 只回答“计划要做什么”，运行状态不直接写回原计划。执行过程单独由 `TaskExecution` 保存，并保留每一次 `TaskAttempt`。
+### Main Agent Flow
 
-这样一次 PostgreSQL 查询可以经历 timeout、再次尝试、参数调整和最终成功，而不需要反复改写 Planner 最初生成的任务。技术性失败（例如 timeout、connection reset）由 Executor 在原参数上重试；`NO_DATA`、时间范围错误、数据源不覆盖、样本不足等语义性问题则交给 Result Analyzer 识别，再由 Planner re-plan。
+```text
+Conversation
+    ↓
+Semantic Understanding
+    ↓
+Analysis Objectives
+    ↓
+Task Planner / Re-planner
+    ↓
+Execution / Orchestrator
+    ↓
+Tool Router → PostgreSQL / DuckDB / Web/API
+    ↓
+Artifact / Evidence Processing
+    ↓
+Quality Approval
+    ↓
+Feature Engine + Result Analyzer
+    ↓
+Objective Sufficiency
+    ↓
+Re-plan OR Response
+```
 
-这形成三层职责：
+这是一次用户请求真正推进的纵向流程。
 
-- `AgentTask`：Planner 想做什么；
-- `TaskExecution`：这个任务整体执行到了哪里；
-- `TaskAttempt`：某一次具体调用用了什么参数、得到什么 ToolResult。
+### Shared Knowledge Services
 
-完整 attempt history 用于 debug、evaluation 和恢复；正常 LLM 上下文不应直接吞入所有失败历史。
+这些能力由多个模块按需调用，不属于某一个固定步骤：
 
-## 2. Checkpoint 是 AgentState 的持久化，而不是“每步都问一次 LLM”
+- RAG Knowledge Base
+- Metric Registry
+- Schema Registry / Schema RAG
+- Source Mapping
+- Entity Dictionary
 
-任务完成后，结果先写入共享 `AgentState`。Checkpoint 保存某个时刻的运行状态，用于恢复和审计。
+Metric Registry 负责稳定、确定性的执行知识；RAG 负责需要语义检索、会随语境或时代变化的领域知识。
 
-但这不意味着每个 Task 后都调用一次 LLM。更稳的流程是：ToolResult → deterministic state update → quality gate；只有遇到需要语义判断或重规划的检查点，才把压缩后的 Context View 交给模型。
+### Runtime & Governance
 
-因此必须区分：
+这些能力贯穿整个 Agent：
 
-- **System State**：包含完整执行历史、失败、候选数据、重试等；
-- **LLM Context View**：只包含用户目标、当前计划摘要、已验证数据、未解决缺口和当前需要模型做的决定。
+- AgentState
+- Artifact Store
+- Checkpoint Store
+- Validation / Policy
+- Logging / Observability
+- Retry / Budget Control
 
-这可以降低上下文污染和意外循环。
+因此 `AgentState` 不是“一个处理节点”，Validation 也不是“SQL 前的一层”，而是跨阶段共享和治理能力。
 
-## 3. 从 task dependency 转向 artifact requirement
+## 2. Semantic Layer 负责拆 Objective
 
-单纯的 `depends_on=["t1"]` 太粗。后续任务真正依赖的往往不是“t1 这个任务”，而是 t1 产生的某类数据。
+当前职责边界进一步明确：Semantic Understanding Layer 负责理解用户问题，并拆成一个或多个 `AnalysisObjective`。
 
-因此更合适的做法是让 Task 声明结构化的 `ArtifactRequirement`：需要什么数据类型、哪些实体、时间范围、Constraint、required data、optional data，以及质量要求。系统再到 Artifact Store 中寻找能够满足要求的数据。
+棒球问题领域相对有限，可以用受控 `objective_type` 给出稳定边界，例如球员表现、球员上下文、伤病、球队表现、球队策略、交易、公众舆论、社区讨论、比较分析等；同时保留开放的 subtype 和 description，避免 Enum 过度限制 Agent 自主性。
 
-这比维护大量 `tucker_recent_data`、`recent_tucker_stats` 之类的自由字符串稳定得多，也避免 artifact_id 分类无限膨胀。
+`objective_type` 可以提供默认 `base_priority`，Planner 再结合用户强调程度、证据状态和执行成本调整 `effective_priority`。
 
-`depends_on` 仍然可以保留，但更适合表示纯 workflow dependency，例如“必须先验证再格式化”；真正的数据依赖则由 Requirement 表达。
+## 3. Planner 负责 Requirement 和 Task
 
-## 4. 实体和数据都要使用 canonical identity
+Planner 不再重新决定“用户到底想问什么”，而是围绕每个 Objective 设计：
 
-球员不能靠显示名做机器关联。`Hernandez`、`Will`、`Kyle` 都可能产生歧义，即使完整姓名也可能重复。
+- `ArtifactRequirement`
+- `AgentTask`
+- 数据依赖 / workflow dependency
+- source strategy
+- effective priority
 
-Entity Resolver 应在 Planner 之前把用户输入解析成 canonical entity，例如 MLBAM ID；`display_name` 给用户和 LLM 看，`canonical_id` 才是内部关联依据。
+因此 Task 只是满足 Objective 的手段。某个 Task 失败，不等于 Objective 失败；只要其他 Task 或数据源能满足同一个 Requirement，下游分析仍可继续。
 
-同样，Artifact 不应靠自然语言名称匹配。Requirement 描述“我要满足哪些条件的数据”，Artifact Store 负责用结构化 metadata 判断已有数据是 `SATISFIED`、`PARTIAL` 还是 `MISSING`。
+## 4. Requirement 描述数据条件，而不是维护大量 artifact_id
 
-## 5. Constraint 继续作为统一查询约束语言
+单纯的 `depends_on=["t1"]` 太粗，而自由字符串如 `tucker_recent_data` 又容易漂移。
 
-`ArtifactRequirement` 的过滤条件不使用自由 `dict`，而复用前面设计的 typed `Constraint`。
+因此当前倾向让 `ArtifactRequirement` 使用固定 schema 描述：
 
-例如“95 mph 以上、高区”应表达成数值约束和类别约束，而不是让 Planner 在不同阶段生成 `speed`、`velocity`、`release_speed` 等漂移字段。
+- data_type
+- entities
+- time_range
+- typed constraints
+- required_data
+- optional_data
+- quality_requirements
 
-这样 Query Understanding → Planner → ArtifactRequirement → SQL/API generation → Validator 可以共享一套约束语义，减少字段漂移和信息损失。
+系统再根据 Artifact metadata 判断已有数据是否 `SATISFIED`、`PARTIAL` 或 `MISSING`。不要求手工维护无限细分的 artifact taxonomy。
 
-## 6. Semantic requirement 与 physical schema 分离
+`depends_on` 仍保留，但主要表达纯 workflow dependency；真正的数据依赖由 Requirement 表达。
 
-Planner 不应直接要求 PostgreSQL 的 `launch_speed` 这种物理字段，而应描述系统内部统一的 semantic requirement，例如 `exit_velocity`、`hard_hit_rate`、`salary`、`injury_context`。
+## 5. Plan、Execution、Attempt 分离
 
-确定性的字段映射由 Registry 管理，例如 `exit_velocity` 在 Statcast 中映射到 `launch_speed`。Schema RAG 则更适合保存表关系、字段说明和需要按语义检索的上下文，不应该承担所有精确执行映射。
+`AgentTask` 只回答“Planner 想做什么”；运行状态不直接写回原计划。
 
-对于 Web，Router 只决定“去哪里找”，不负责把文章转成数据库字段。Web Tool 返回 `RawWebResult`，Evidence Extractor 再把可标准化事实转换成 structured evidence；不适合安全标准化的内容保留为带来源的 claim，而不是强行转成一个布尔字段。
+```text
+AgentTask
+= 计划定义
 
-## 7. ToolResult 记录工具事实，Result Analyzer 判断业务意义
+TaskExecution
+= 任务总体执行状态
 
-`0 rows` 不等于工具失败。ToolResult 应区分 SQL 是否执行成功、结果状态、错误类型、是否可重试和来源。
+TaskAttempt
+= 某一次真实尝试
+```
 
-`retryable` 属于工具层：同一个工具能否再次尝试；`recoverable` 属于 Agent 层：整个系统是否还能通过另一个数据源补齐缺口。
+每次 attempt 保留参数快照和 ToolResult。这样 timeout、重试、参数调整和最终成功都可以被审计，而不需要反复改写 Planner 最初生成的任务。
 
-来源也分两层：ToolResult 记录本次用了哪个工具或入口，具体数据和 Evidence 自己记录更细的来源。这样既能优化 Tool Router，也能追溯每一条证据。
+技术性失败如 timeout、connection reset 由 Executor 在原语义请求上 retry；`NO_DATA`、时间范围错误、数据源不覆盖、样本不足等语义性问题交给 Result Analyzer，再由 Planner re-plan。
 
-## 8. 不让低质量中间结果直接污染上下文
+## 6. Checkpoint 是 State Persistence，不是“每步都问 LLM”
 
-Collected data 不自动等于 Approved data。新结果先作为 Candidate Artifact，经过校验后才能成为主要分析输入；低样本、来源冲突或部分覆盖可以保留，但必须携带质量状态和限制。
+Task 结果写入 `AgentState` 后可以形成 checkpoint，但 checkpoint 不等于每完成一个 task 就调用一次 LLM。
 
-这也是 confidence loop 能安全运行的前提。此前讨论中的 confidence 更接近 **analysis sufficiency**，不是模型“有多少概率正确”。当仍有 recoverable gap 时继续寻找；当缺口客观不可恢复时允许以 `LIMITED` 状态退出，并明确告诉用户原因，例如未达到 qualified threshold 或某年代根本不存在该指标。
+完整 System State 可以保存失败 attempts、Candidate Artifact、旧计划和执行日志；LLM Context View 只暴露与当前决策相关的有效信息，例如用户目标、当前 Objective、已批准 Artifact、未解决 Requirement 和需要模型做出的决策。
 
-## 9. Metric Registry 保持简单，组合工作交给 Planner
+因此：
 
-本轮进一步确认：不要让 Registry 变成一个替 Planner 做完全部决策的规则引擎。
+```text
+System State ≠ LLM Context
+```
 
-Registry 重点保留两个对象：
+这是减少上下文污染和不必要模型调用的核心原则。
+
+## 7. Entity 与 Constraint 保持统一语义
+
+球员不能依赖显示名做机器关联。`Hernandez`、`Will`、`Kyle` 等名称存在天然歧义，因此 Entity Resolver 应在 Planner 前解析 canonical entity，内部关联依赖 MLBAM ID 或其他稳定 ID。
+
+Constraint 继续作为跨层统一的查询约束语言。`ArtifactRequirement` 的筛选条件不使用自由 dict，而复用 typed Constraint，使“95 mph 以上、高区、最近 30 天”等条件从 Semantic 到 SQL/API generation 保持一致。
+
+Semantic Layer 可以根据上下文补充隐含 Constraint，但必须保留来源，区分用户明确要求与系统推断，便于后续覆盖或澄清。
+
+## 8. Semantic Requirement 与 Physical Schema 分离
+
+Planner 应描述 `exit_velocity`、`salary`、`injury_context` 等 semantic requirement，而不是直接依赖 PostgreSQL 的物理字段名。
+
+确定性映射由 `MetricDefinition`、`SourceMapping`、Schema Registry 管理；Schema RAG 负责需要语义检索的字段说明、表关系和使用上下文。
+
+Metric 层保持简单：
 
 - `MetricDefinition`：指标是什么、单位、定义、时间有效性；
-- `SourceMapping`：某个 source 如何取得这个 metric，是 `DIRECT`、`CALCULATED` 还是没有映射。
+- `SourceMapping`：某个 source 如何提供该 metric，是 `DIRECT`、`CALCULATED` 或没有映射。
 
-其中 `CALCULATED` 比 `DERIVED` 更直观，表示 Feature Engine 可以根据底层数据确定性计算。若单个 source 无法满足组合需求，Planner 负责拆成多个 Task，例如 PostgreSQL 获取 Statcast、Feature Engine 计算 HardHit%、Web/Spotrac 补薪资，再综合分析。
+跨多个来源拼出完整答案的工作交给 Planner，而不是让 Metric Registry 变成另一个工作流引擎。
 
-这避免把“一个 source 能不能满足整个用户问题”错误地塞进单个 metric 的状态里。
+## 9. Web 保持宽松输入，Evidence Extractor 负责语义结构化
 
-## 10. Metric Registry 与 RAG 的边界
+Web 无法像 PostgreSQL 一样预先声明完整 capability。Router 只决定“去哪里找”，不负责把文章转成数据库字段。
 
-两者不是二选一。
+```text
+Web Tool
+  ↓
+RawWebResult
+  ↓
+Evidence Extractor
+  ↓
+Structured Evidence
+```
 
-**Metric Registry** 存系统必须稳定知道、程序可以直接执行的事实，例如 metric_id、计算定义、source mapping、时间有效范围。目标是 execution correctness。
+可安全标准化的内容可以映射到 semantic data；主观评价、报道和上下文则保留为带 provenance 的 Evidence / Claim，避免把一篇新闻强行压成一个布尔字段。
 
-**RAG Knowledge Base** 存需要按语义检索、可能随语境和时代变化的知识，例如“击球质量通常看哪些维度”、指标 caveat、球探框架、联盟战术趋势。目标是 semantic reasoning。
+## 10. ToolResult 只描述工具事实
 
-因此，“HardHit% 如何计算、在哪个 source 能拿”属于 Registry；“分析击球质量时为什么要同时看 EV、Barrel%、xwOBA，以及小样本下怎么解释”更适合 RAG。
+`0 rows` 不等于工具失败。ToolResult 应区分：
+
+- execution success
+- result status
+- data / payload
+- error type
+- retryable
+- source / provenance
+
+`retryable` 属于工具层；`recoverable` 属于 Agent 层。某个本地 source 无法提供 salary，不代表 salary 整体不可恢复，因为 Planner 仍可换到 Spotrac 或 Web。
+
+## 11. Collected Data 不自动等于 Approved Data
+
+新结果首先进入 Candidate Artifact。低样本、来源冲突、部分时间覆盖和 Web claim 不应直接成为主 Agent 的事实输入。
+
+当前质量链路为：
+
+```text
+Candidate Artifact
+    ↓
+Deterministic Validator
+    ↓
+Hard Gates
+    ↓
+Judge / Critic Agent
+    ↓
+ArtifactAssessment
+    ↓
+APPROVED / LIMITED / REJECTED
+```
+
+Code validation 负责硬规则；Judge Agent 负责语义质量评审，例如来源是否真正支持 claim、冲突是否显著、证据是否只适合描述性分析。
+
+Judge 使用离散等级，例如 `STRONG / ACCEPTABLE / WEAK / REJECT`，而不是直接输出伪精确 confidence。Judge 不决定下一个 Tool，重规划仍属于 Planner。
+
+## 12. Analysis Sufficiency 按 Objective 计算
+
+单个 Artifact 达到质量要求，不代表整个用户问题已经完整。
+
+Artifact 层评价 completeness、sample adequacy、temporal coverage、source reliability 等；Objective 层评价 requirement coverage、critical gaps、cross-artifact consistency 和 limitations。
+
+因此之前的 confidence loop 收敛为 **Objective Sufficiency Loop**：
+
+```text
+O1 performance → COMPLETE
+O2 injury      → LIMITED / recoverable
+O3 salary      → IN_PROGRESS
+```
+
+Planner 只继续处理尚未满足且仍有 recoverable gap 的 Objective。已完成 Objective 可以冻结并复用。
+
+如果某个缺口客观不可恢复，例如对应年代不存在指标、样本未达到 qualification threshold，则允许该 Objective 以 `LIMITED` 结束并向用户说明原因。
+
+整个 Query 只需要粗粒度 `COMPLETE / PARTIAL / FAILED`。这使系统即使没解决所有子问题，也可以把已经可靠完成的部分呈现给用户。
+
+## 13. Validation / Policy 贯穿始终
+
+Validation 不应只存在于 SQL 前后。它横跨：
+
+```text
+Input → Semantic → Plan → Tool → Artifact → Report
+```
+
+包括用户输入边界、实体与 Constraint 合法性、Plan 检查、SQL 权限、ToolResult 校验、Artifact quality 和最终 claim/evidence consistency。
+
+这也是为什么 Validation 属于 Runtime & Governance，而不是 Main Flow 中的一次性节点。
 
 ## 当前收敛出的原则
 
-这一轮最重要的变化不是增加更多模块，而是减少 LLM 不必要承担的职责：LLM 描述需求并做语义性决策，代码生成稳定标识、校验 Constraint、管理 retry/checkpoint、匹配 Artifact、执行计算；只有异常和真正需要重规划的地方才进入新的 LLM checkpoint。
+目前架构的核心不是“让更多步骤调用 LLM”，而是减少 LLM 不必要承担的职责：
 
-接下来仍需继续讨论的核心问题包括 `ArtifactRequirement` 和 `DataArtifact` 的正式 schema、质量要求如何表达、Planner 如何消费 MetricDefinition/SourceMapping，以及 Result Analyzer 的 sufficiency 计算规则。
+- Semantic Layer 负责理解和拆 Objective；
+- Planner 负责 Requirement、Task 与 source strategy；
+- Executor 负责技术 retry；
+- Tool 返回真实执行事实；
+- Registry 提供确定性映射；
+- RAG 提供可检索语义知识；
+- Judge 只做数据 / 证据质量评审；
+- Feature Engine 负责确定性计算；
+- Result Analyzer + Sufficiency Engine 判断每个 Objective 是否足够；
+- Context Builder 只把 Approved / 必要 Limited 信息送给主模型。
 
-**来源：** S5，2026-09-07 至 2026-09-10 当前 Baseball Agent 架构讨论。
+下一步应以这版结构作为总体架构基线，进入正式 Domain Modeling：明确 `AnalysisObjective → ObjectivePlan → ArtifactRequirement → AgentTask → TaskExecution → DataArtifact → ArtifactAssessment → ObjectiveState` 的所有权、状态迁移和数据契约，再进入 spec 与实现。
+
+**来源：** S5，2026-09-07 至 2026-09-11 当前 Baseball Agent 架构讨论。
