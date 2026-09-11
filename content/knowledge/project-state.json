@@ -1,6 +1,6 @@
 {
   "project": "baseball_agent",
-  "as_of": "2026-09-10",
+  "as_of": "2026-09-11",
   "coverage": "partial_accessible_sources_plus_current_architecture_discussion",
   "current_repository_verified": false,
   "implementation_evidence": [
@@ -20,11 +20,46 @@
       "source": "S1"
     }
   ],
+  "architecture_baseline": {
+    "main_agent_flow": [
+      "conversation",
+      "semantic_understanding",
+      "analysis_objectives",
+      "task_planner_replanner",
+      "execution_orchestrator",
+      "tool_router_and_tools",
+      "artifact_evidence_processing",
+      "quality_approval",
+      "feature_engine_and_result_analyzer",
+      "objective_sufficiency",
+      "replan_or_response"
+    ],
+    "shared_knowledge_services": [
+      "rag_knowledge_base",
+      "metric_registry",
+      "schema_registry_and_schema_rag",
+      "source_mapping",
+      "entity_dictionary"
+    ],
+    "runtime_and_governance": [
+      "agent_state",
+      "artifact_store",
+      "checkpoint_store",
+      "validation_policy",
+      "logging_observability",
+      "retry_budget_control"
+    ]
+  },
   "confirmed_directions": [
     "preserve_raw_query_and_confirmed_constraints",
     "multi_intent_but_intent_not_tool",
+    "semantic_layer_decomposes_analysis_objectives",
+    "controlled_objective_type_with_open_subtype_description",
+    "objective_base_priority_then_planner_effective_priority",
     "canonical_entity_identity_before_planner",
     "typed_constraint_as_shared_query_language",
+    "semantic_layer_may_add_tagged_inferred_constraints",
+    "planner_designs_artifact_requirements_and_agent_tasks",
     "plan_execution_attempt_separation",
     "preserve_task_attempt_history",
     "technical_retry_vs_semantic_replan",
@@ -37,19 +72,29 @@
     "raw_web_result_then_evidence_extraction",
     "agent_state_separate_from_llm_context_view",
     "candidate_data_requires_quality_gate",
-    "analysis_sufficiency_loop_with_limited_exit",
+    "deterministic_validation_before_judge_agent",
+    "judge_agent_uses_discrete_quality_levels_and_does_not_plan",
+    "artifact_quality_and_objective_sufficiency_are_separate",
+    "objective_sufficiency_loop_with_limited_exit",
+    "completed_objectives_can_be_frozen_and_reused",
+    "partial_query_reports_are_allowed",
     "metric_definition_plus_source_mapping",
     "direct_calculated_or_no_mapping",
-    "metric_registry_for_execution_rag_for_semantics"
+    "metric_registry_for_execution_rag_for_semantics",
+    "validation_is_cross_cutting_governance",
+    "architecture_split_main_flow_shared_knowledge_runtime_governance"
   ],
   "open_questions": [
+    "analysis_objective_and_objective_plan_schema",
     "artifact_requirement_and_data_artifact_schema",
     "quality_requirement_schema",
-    "analysis_sufficiency_definition_and_threshold",
+    "judge_agent_input_output_contract",
+    "artifact_and_objective_sufficiency_scoring_and_thresholds",
     "planner_metric_registry_interface",
     "checkpoint_storage_and_recovery",
     "retry_replan_total_step_budgets",
     "evidence_validation_policy",
+    "objective_priority_policy",
     "langgraph_adoption_timing"
   ],
   "editorial_proposals": [
@@ -62,11 +107,12 @@
     "current-state.md",
     "decisions.md",
     "sources.md",
+    "../posts/01-from-data-to-agent.md",
     "../posts/09-planning-artifacts-and-evidence.md"
   ],
   "blog_repository": "https://github.com/CityuHK-wyj/cityuhk-wyj.github.io",
   "blog_url": "https://cityuhk-wyj.github.io/",
   "deployment_status_url": "https://github.com/CityuHK-wyj/cityuhk-wyj.github.io/actions",
   "blog_deployed": true,
-  "last_content_update": "2026-09-10"
+  "last_content_update": "2026-09-11"
 }
