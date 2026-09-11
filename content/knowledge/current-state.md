@@ -15,23 +15,20 @@
 
 ## 当前总体架构基线
 
-当前架构不再被描述成一条包含所有模块的线性流水线，而分成三类：
-
-### Main Agent Flow
+当前架构按大职责组织为六个主层，并由 Shared Knowledge、Runtime State 和 Governance 贯穿：
 
 ```text
-Conversation
-→ Semantic Understanding
-→ Analysis Objectives
-→ Task Planner / Re-planner
-→ Execution / Orchestrator
-→ Tool Router + Tools
-→ Artifact / Evidence Processing
-→ Quality Approval
-→ Feature Engine + Result Analyzer
-→ Objective Sufficiency
-→ Re-plan OR Response
+Interaction
+→ Normalization
+→ Planning & Orchestration
+→ Data & Tool
+→ Evaluation & Sufficiency
+→ Response
 ```
+
+### Normalization
+
+Semantic Understanding、Entity / Constraint / Objective normalization、Evidence / Artifact normalization、Metric / Feature transformation 都属于更大的标准化职责。Architecture Layer 不等于 Python package；不同代码模块可以独立实现，但在总体信息流上共享“把不稳定或异构输入转成 canonical representation”的目标。
 
 ### Shared Knowledge Services
 
@@ -40,53 +37,53 @@ Conversation
 - Schema Registry / Schema RAG
 - Source Mapping
 - Entity Dictionary
+- League / Reference Context
 
-这些服务会被 Semantic、Planner、Judge、Analyzer、Formatter 等多个模块按需调用，不属于某一个固定步骤。
+这些服务由 Semantic、Requirement Decomposer、Planner、Router、Judge、Analyzer、Formatter 等按需调用，不属于某一个固定步骤。
 
-### Runtime & Governance
+### Runtime State & Governance
 
-- AgentState
-- Artifact Store
-- Checkpoint Store
-- Validation / Policy
-- Logging / Observability
-- Retry / Budget Control
-
-这些能力贯穿整个 Agent 生命周期。尤其 `AgentState`、Validation 与 RAG 不应再被画成线性 pipeline 中的一站。
+运行时状态倾向拆为多个 State Domain，而不是单个超级 AgentState：Query、Objective、Requirement/Planning、Routing、Execution、Artifact、Interaction、Permission、Budget 等。Validation / Policy、Logging / Observability、Retry / Budget、Read-only DB policy、Permission / Escalation policy 属于 cross-cutting governance。
 
 ## 讨论中明确的方向
 
 - 保留 `raw_query`，Intent 可多值，但 Intent 与 Tool 分离。
-- Semantic Understanding Layer 负责把用户问题拆成一个或多个 `AnalysisObjective`；Planner 不重新解释用户意图，而是围绕 Objective 设计 Requirement 和 Task。
-- Objective 使用受控主类 + 开放 subtype/description，以稳定边界而不过度限制 Agent 自主性；objective type 可提供 base priority，Planner 再调整 effective priority。
-- Entity Resolver 在 Planner 前进行规范化，内部关联依赖 canonical ID，不依赖姓名唯一性。
-- Constraint 作为跨 Query Understanding、Planner、ArtifactRequirement、SQL/API generation 的统一查询约束语言；Semantic Layer 可以补充隐含约束，但需标记其来自系统推断而非用户明确要求。
-- Planner 尽量停留在 semantic level；确定性的 physical schema / metric mapping 交给 Registry，RAG 处理语义和动态知识。
-- `AgentTask` 描述计划，`TaskExecution` 描述总体执行状态，`TaskAttempt` 保存每一次具体尝试；原始计划不因运行状态反复改写。
-- timeout 等技术性失败由 Executor 按原参数 retry；`NO_DATA`、样本不足、数据源不覆盖等语义性问题交给 Result Analyzer，再由 Planner re-plan。
-- Task 的数据依赖优先表达为结构化 `ArtifactRequirement`；`depends_on` 主要保留纯 workflow dependency。
+- Semantic Layer 负责拆 `AnalysisObjective`；用户自己也不明确需求时，应生成少量 clarification options 让用户确认，而不是擅自固定问题含义。
+- Objective 使用受控主类 + 开放 subtype/description；Objective type 可提供 base priority，后续只调整 execution priority，不偷偷改变业务语义。
+- Definition 与 State 分离，例如 `AnalysisObjective ↔ ObjectiveState`、`AgentTask ↔ TaskExecution`。
+- Requirement Decomposer 作为 Planner 前的窄职责 Sub-agent，利用 Shared Knowledge Services 把 Objective 拆成 semantic-atomic `ArtifactRequirement`；它不选 Tool，也不能因当前 source 不方便而删除用户明确需求。
+- Requirement 的 `base_criticality` 表示它对原 Objective 的语义重要性，原则上近似 immutable；后续 round / budget 可以影响调度，但不能为了更容易 COMPLETE 而降级关键 Requirement。
+- `ArtifactRequirement` 与实际 Artifact 共享统一 `ArtifactDescriptor` / `ArtifactType`、canonical Entity、typed Constraint、semantic data key 等语言，避免 Requirement 与 Artifact 各自发明命名。
+- Artifact 本体尽量 immutable，保存 descriptor、payload、provenance、lineage；Feature Engine 计算结果也产生新的 Metric/Feature Artifact，并通过 `derived_from` 保留 data lineage。
+- Qualification 与 Sample Adequacy 分离：qualification 决定能否进入候选池，sample adequacy 决定样本能否支撑分析结论。`minimum_sample_size` 不再作为 Planner 随意填写的独立字段。
+- 赛季进行中的 qualification 需要 League/Reference Context；官方 season progress 与 local ingestion coverage 分开记录，避免把数据库最新日期误当联盟真实进度。
+- Planner 负责 logical execution strategy，并可提供 source preference；Router 是与 Planner 并列但权限更窄的 Routing Agent，结合 SourceMapping、freshness、cost、failures 和 available tools 选择实际 source/tool。
+- Router 可因 freshness / availability 违背 Planner preference，但不能绕过用户 source constraint 或 Governance hard policy。
+- Orchestrator 是管理者而非领域专家：调度、并行、阻塞、权限、预算、跨 State transition、replan timing 和用户 escalation 由它协调；Sub-agent 的专业工作由各自完成。
+- Re-planning 不需要第二个 Planner；同一 Planning Agent 支持 INITIAL_PLAN / REVISE_PLAN。Orchestrator 决定 when，Planner 决定 what，Router 决定 where/how。
+- Sub-agent 可以更新自己的 Local State，并提交 Report / Decision；跨 Domain / 全局 State transition 需由 Orchestrator 审阅。核心原则为 `Local ownership + reviewed global transition`。
 - `0 rows` 不等于 Tool failure；`retryable` 属于工具层，`recoverable` 属于 Agent 全局层。
-- ToolResult 记录工具级来源，具体数据 / Evidence 自己记录细粒度 provenance。
-- Web Tool 可以返回宽松的 RawWebResult；Evidence Extractor 负责非结构化到结构化 Evidence，Router 只决定去哪里找。
-- collected data 不自动进入主分析上下文；Candidate Artifact 先经过 deterministic validation、hard gates 与 Judge/Critic Agent，再成为 APPROVED / LIMITED / REJECTED。
-- Judge Agent 只做数据与证据语义质量评审，不接管 Planner；倾向使用 STRONG / ACCEPTABLE / WEAK / REJECT 离散等级并附原因。
-- `AgentState` 与 `LLM Context View` 分离，避免把失败尝试、低质量结果和已失效信息全部塞进模型上下文。
-- confidence 更接近 analysis sufficiency，而非“模型正确概率”；sufficiency 按 Objective 计算，而非只给整个 Query 一个总分。
-- 已完成 Objective 可以冻结并复用；仍有 recoverable gap 的 Objective 继续规划；客观不可恢复时允许 `LIMITED` 退出并解释原因。
-- 整个 Query 只需要粗粒度 `COMPLETE / PARTIAL / FAILED`，因此部分 Objective 已可靠完成时可以输出 PARTIAL report。
-- Metric 层保持简单：`MetricDefinition` 定义指标，`SourceMapping` 描述具体来源映射；状态优先使用 `DIRECT`、`CALCULATED` 与无映射。组合多个来源满足用户问题的工作由 Planner 完成。
-- Validation / Policy 是横切能力，覆盖 input、semantic output、plan、SQL/tool call、ToolResult、Artifact 和 final claim/evidence consistency。
+- Web Tool 可返回 RawWebResult；Evidence Extractor 负责转为 structured Evidence / Artifact，Router 只决定去哪找。
+- Artifact quality 不是 Artifact 固有分数，而是绑定 `artifact_id + requirement_id + objective_id` 的 contextual `ArtifactAssessment`。
+- 质量链路为 deterministic validation / hard gate → Judge/Critic Agent → ArtifactAssessment；Artifact Registry 管理索引、lineage、lifecycle、assessment ref，但不是质量裁判。
+- Judge 使用离散语义等级，不接管 Planner，也不能直接把 Objective 标成 COMPLETE。
+- Objective Sufficiency 先做 Critical Requirement hard gate，再做 weighted requirement coverage；不能用大量低重要性证据平均掉核心缺口。
+- ObjectiveState 倾向 `PENDING / IN_PROGRESS / COMPLETE / LIMITED / FAILED`；COMPLETE 可以保留 optional_gaps / limitations，并由 Formatter 反馈用户。
+- Selective re-plan 综合 gap criticality、recoverability、round count、attempt history、remaining budget 和 expected benefit；已完成部分冻结复用。
+- Semantic Clarification 必须询问用户；问题已明确后，免费且允许的数据源 fallback 可由 Agent 自主进行；付费 / 高成本 source 才需要用户授权。
+- PostgreSQL、DuckDB / Parquet 在当前 Runtime 中是只读分析资源；数据库/文件修改属于 System Administrator 权限，用户不能在对话中授权 Agent 越过这一边界。
+- `System State != LLM Context`；完整状态用于恢复/审计，LLM 只接收当前决策需要的投影。
 
-不要求手工维护过细的 artifact_id 分类。博客中的 JSON / Pydantic 片段均是设计示例，不代表已批准应用接口。
+博客中的 JSON / Pydantic 片段均是设计示例，不代表已批准应用接口或已实现代码。
 
 ## 尚未定稿
 
-`AnalysisObjective` / `ObjectivePlan` / `ArtifactRequirement` / `DataArtifact` 正式 schema；quality requirements 的表达；Judge/Critic Agent 输入输出契约；Artifact 与 Objective 两级 sufficiency 的具体计算与权重；Planner 如何消费 `MetricDefinition` 与 `SourceMapping`；checkpoint 的具体持久化实现；执行预算和最大 retry / replan / total step；Evidence validation；LangGraph 是否以及何时引入。
+统一 `ArtifactDescriptor`、`ArtifactRequirement`、Artifact / payload subtype、ArtifactAssessment 正式 schema；Requirement Matcher；QualificationRule / SampleAdequacyRule / LeagueStateSnapshot 的正式契约；PlannerReport / RoutingReport / JudgeReport 等 Sub-agent Report envelope；State Domain 与 transition contract；Objective hard gate / weighted coverage 的具体算法；Orchestrator review policy；checkpoint persistence；预算与成本策略；LangGraph 是否以及何时引入。
 
 ## 建议的下一步
 
-以当前三分法架构作为总体基线，进入正式 Domain Modeling。优先明确 `AnalysisObjective → ObjectivePlan → ArtifactRequirement → AgentTask → TaskExecution → DataArtifact → ArtifactAssessment → ObjectiveState` 的所有权、状态迁移和数据契约，再生成 spec/tickets。不要继续把共享服务和横切能力当成额外 pipeline 节点。
+继续 Domain Modeling，不再增加新的大层。优先把共享 Artifact contract、多个 State Domain、Sub-agent Report / Decision Contract 和 Orchestrator transition policy 定清，再进入 spec/tickets。实现时保持“窄职责 Sub-agent + deterministic governance + shared canonical models”的方向。
 
 ## 本博客的状态
 
-截至 2026-09-11 仍登记 9 篇阶段性文章，没有新增文章。本轮直接修订既有总览、Task Planner、Validation/Feedback 和第 9 篇架构文章，并同步本文、`decisions.md`、`project-state.json`、`sources.md` 与目录元数据。
+截至 2026-09-11 仍登记 9 篇阶段性文章，没有新增文章。本轮继续修订 Task Planner、Validation/Feedback 与第 9 篇总体架构文章，并同步本文、`decisions.md`、`project-state.json`、`sources.md` 与目录元数据。
