@@ -1,8 +1,9 @@
 {
   "project": "baseball_agent",
-  "as_of": "2026-09-11",
+  "as_of": "2026-09-14",
   "coverage": "partial_accessible_sources_plus_current_architecture_discussion",
   "current_repository_verified": false,
+  "architecture_status": "frozen_for_domain_modeling",
   "implementation_evidence": [
     {
       "feature": "four_tool_loop",
@@ -29,18 +30,21 @@
       "evaluation_and_sufficiency",
       "response"
     ],
-    "shared_knowledge_services": [
+    "shared_knowledge_context": [
       "rag_knowledge_base",
       "metric_registry",
       "schema_registry_and_schema_rag",
       "source_mapping",
       "entity_dictionary",
-      "league_reference_context"
+      "league_reference_context",
+      "context_management",
+      "retrieval_filter_rank_freshness_projection_delivery"
     ],
     "runtime_state_domains": [
       "query_state",
       "objective_state",
-      "requirement_planning_state",
+      "requirement_state",
+      "planning_state",
       "routing_state",
       "execution_state",
       "artifact_state",
@@ -54,8 +58,15 @@
       "permission_escalation_policy",
       "logging_observability",
       "retry_budget_control",
-      "checkpoint_store"
-    ]
+      "checkpoint_persistence"
+    ],
+    "persistence": {
+      "control_plane": "independent_operational_postgresql_with_optional_pgvector",
+      "large_payloads": "local_or_object_storage",
+      "data_plane": "baseball_analytics_postgresql_and_parquet_duckdb_read_only",
+      "redis": "not_required_for_v1",
+      "checkpoint_model": "consistent_state_coordinate_plus_snapshot_and_event_history"
+    }
   },
   "confirmed_directions": [
     "preserve_raw_query_and_confirmed_constraints",
@@ -63,7 +74,10 @@
     "clarify_with_options_when_user_need_is_ambiguous",
     "controlled_objective_type_with_open_subtype_description",
     "definition_state_separation",
+    "objective_and_requirement_state_exist_from_definition_creation",
     "requirement_decomposer_before_planner",
+    "initial_requirements_are_immutable_business_baseline",
+    "planner_may_add_supporting_requirements_without_changing_original_completion_semantics",
     "semantic_atomicity_for_requirements",
     "requirement_base_criticality_is_stable_semantic_importance",
     "shared_artifact_descriptor_between_requirement_and_artifact",
@@ -75,7 +89,11 @@
     "router_is_narrow_routing_agent",
     "router_may_override_preferences_but_not_constraints_or_policy",
     "orchestrator_is_manager_not_domain_expert",
-    "same_planner_supports_initial_and_revise_modes",
+    "planner_owns_plan_replan_stop_planning_decision",
+    "planner_terminal_prevents_repeated_reinvocation_without_new_external_conditions",
+    "requirement_state_is_primary_planner_feedback",
+    "objective_state_is_primary_orchestrator_finalization_feedback",
+    "planner_can_inspect_artifact_index_and_assessment_summary",
     "local_state_ownership_with_orchestrator_reviewed_cross_domain_transitions",
     "plan_execution_attempt_separation",
     "preserve_task_attempt_history",
@@ -86,12 +104,20 @@
     "record_tool_and_data_provenance",
     "raw_web_result_then_evidence_extraction",
     "artifact_quality_is_contextual_assessment",
+    "artifact_assessment_indexes_artifact_and_stores_deterministic_judge_and_final_result",
+    "hard_deterministic_failures_are_not_overridable",
+    "soft_validation_signals_can_be_contextually_reinterpreted_by_judge",
+    "judge_agent_produces_short_assessment_summary_for_planner",
     "artifact_registry_manages_but_does_not_judge_quality",
-    "deterministic_validation_before_judge_agent",
-    "judge_agent_uses_discrete_quality_levels_and_does_not_plan",
     "critical_requirement_gate_before_weighted_objective_coverage",
     "complete_objective_can_retain_optional_gaps_and_limitations",
-    "selective_replan_uses_criticality_recoverability_round_history_budget_expected_benefit",
+    "limited_objective_requires_terminal_planning_and_useful_bounded_result",
+    "response_agent_only_consumes_final_accepted_outputs",
+    "final_response_preserves_accepted_artifacts_evidence_critical_shared_knowledge_and_provenance",
+    "completion_report_is_internal_finalization_record",
+    "response_package_is_user_facing_projection",
+    "retrieval_is_shared_context_capability_not_business_subagent",
+    "persist_broadly_retrieve_narrowly",
     "free_permitted_source_fallback_can_be_autonomous",
     "paid_or_high_cost_sources_require_user_escalation",
     "postgresql_duckdb_parquet_are_read_only_agent_resources",
@@ -99,27 +125,29 @@
     "agent_runtime_state_separate_from_llm_context_view",
     "metric_definition_plus_source_mapping",
     "metric_registry_for_execution_rag_for_semantics",
-    "validation_is_cross_cutting_governance"
+    "validation_is_cross_cutting_governance",
+    "architecture_freeze_before_domain_modeling"
   ],
   "open_questions": [
-    "artifact_descriptor_requirement_artifact_payload_schema",
+    "core_domain_contract_schemas",
     "requirement_matcher_contract",
     "qualification_sample_adequacy_league_state_contract",
-    "subagent_report_decision_envelope",
+    "agent_report_planning_decision_checkpoint_context_package_contracts",
     "state_domain_and_state_transition_contract",
-    "objective_critical_gate_weighted_coverage_algorithm",
-    "orchestrator_review_policy",
-    "planner_router_registry_interfaces",
-    "checkpoint_storage_and_recovery",
+    "requirement_and_objective_state_update_algorithm",
+    "planner_router_registry_context_interfaces",
+    "persistence_table_version_retention_compaction_design",
+    "context_retrieval_projection_policy",
     "permission_and_cost_policy_levels",
     "langgraph_adoption_timing"
   ],
-  "editorial_proposals": [
-    "versioned_plan_or_execution_snapshots",
-    "requirement_match_status_satisfied_partial_missing",
-    "retain_raw_web_source_and_structured_evidence",
-    "only_send_projected_validated_state_to_llm",
-    "shared_agent_report_envelope"
+  "next_phase": [
+    "domain_modeling",
+    "adr",
+    "architecture_and_feature_spec",
+    "tickets",
+    "tdd_implementation",
+    "code_review"
   ],
   "read_first": [
     "current-state.md",
@@ -133,5 +161,5 @@
   "blog_url": "https://cityuhk-wyj.github.io/",
   "deployment_status_url": "https://github.com/CityuHK-wyj/cityuhk-wyj.github.io/actions",
   "blog_deployed": true,
-  "last_content_update": "2026-09-11"
+  "last_content_update": "2026-09-14"
 }
