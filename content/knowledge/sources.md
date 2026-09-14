@@ -1,6 +1,6 @@
 # 来源与覆盖范围
 
-首版整理日期：2026-09-07；最近更新：2026-09-11。本文说明哪些材料被实际读取，哪些仅来自摘要，哪些尚不可访问。
+首版整理日期：2026-09-07；最近更新：2026-09-14。本文说明哪些材料被实际读取，哪些仅来自摘要，哪些尚不可访问。
 
 ## 来源登记
 
@@ -10,7 +10,7 @@
 | S2 | 粘贴的文本 (1).txt，文件日期 2026-06-20 | 全文读取，共 251 行 | 四工具原型、直接 SQL 执行、联网截取、提示词与循环逻辑 |
 | S3 | lvyneko_agent_workflow.md，整理日期 2026-09-05 | 全文读取，共 220 行；已有二次整理 | 外部学习方法及向本项目迁移的建议 |
 | S4 | GitHub Pages 官方文档 | 2026-09-07 查询 | 个人站命名、构建与发布配置 |
-| S5 | 2026-09-07 至 2026-09-11 当前 Baseball Agent 架构讨论 | 当前会话直接可见，非历史全量导出 | Task/Artifact/Objective 建模、Judge 与 Sufficiency、Normalization 大层、Requirement Decomposer、Planner/Router/Orchestrator 分工、State Domain ownership、权限与只读边界等最新确认方向 |
+| S5 | 2026-09-07 至 2026-09-14 当前 Baseball Agent 架构讨论 | 当前会话直接可见，非历史全量导出 | Requirement/Artifact/State 建模、Planner/Router/Orchestrator、Judge/Assessment、Persistence/Checkpoint、Shared Context/Retrieval、Response Finalization 与 Architecture Freeze 等最新确认方向 |
 
 S2 的原始材料含私人配置，本博客只转述项目逻辑，不附原脚本。S3 是模型生成的二次整理，其关于作者的叙述未在本次重新逐项核验；没有将它作为用户已经确认的项目决策。S5 只覆盖本轮当前会话中直接可见的讨论，不应被理解为完整项目聊天导出。
 
@@ -23,14 +23,16 @@ S2 的原始材料含私人配置，本博客只转述项目逻辑，不附原�
 - 2026-09-03 至 09-04 环境讨论：WSL 自动激活与启动慢、Git 访问、Docker、Redis。只采纳与项目相关的概念和已记录观察。
 - 2026-09-05 外部学习资料：作为补充阅读方法；不能证明属于本项目内的全部聊天。
 - 2026-09-07 至 09-10 当前会话：集中收敛 Planner、ToolResult、attempt history、checkpoint、artifact data dependency、semantic/physical schema 分层、Evidence Extractor、Metric Registry 与 RAG 的边界。
-- 2026-09-10 至 09-11 当前会话前半段：加入 Judge/Critic Agent、Artifact/Objective 两级质量评估、Objective Sufficiency Loop、部分结果输出、Objective 类型与优先级，并把总体架构重排为 Main Agent Flow、Shared Knowledge Services、Runtime & Governance 三类。
-- 2026-09-11 当前会话后半段：进一步把主架构压缩为 Interaction、Normalization、Planning & Orchestration、Data & Tool、Evaluation & Sufficiency、Response 六个大层；确认 Requirement Decomposer、统一 ArtifactDescriptor、Qualification 与 Sample Adequacy 分离、League State、Planner/Router 并列、Orchestrator 管理者模式、多 State Domain、Local ownership + reviewed global transition、用户 clarification / 付费 escalation / system-admin-only 只读边界。
+- 2026-09-10 至 09-11：加入 Judge/Critic Agent、Artifact/Objective 两级质量评估、Objective Sufficiency Loop、Requirement Decomposer、统一 ArtifactDescriptor、League State、Planner/Router/Orchestrator 分工、多 State Domain、权限与只读边界。
+- 2026-09-11 至 09-14：进一步确认 Response Agent 只能看到 accepted outputs；最终保留 Accepted Artifact/Evidence 与关键 Shared Knowledge；Checkpoint 采用一致状态坐标 + Snapshot/Event History；Agent Runtime 使用独立 Operational PostgreSQL + 可选 pgvector、Artifact/Object Storage，与只读 baseball data plane 隔离；Retrieval 降为 Shared Knowledge & Context 的内部资料管理能力；ObjectiveState/RequirementState 从 Definition 创建时即存在并由 State Service 更新；ArtifactAssessment 以 deterministic facts/hard gates 为基础、Judge 对 soft signals 做上下文解释；Initial Requirement 不可修改、Planner 可加 supporting requirement，并根据 RequirementState 自己决定 PLAN/REPLAN/STOP_PLANNING；planner_terminal 防止 Orchestrator 重复调用；宏观架构进入 Architecture Freeze。
 
 以上日期用于定位来源线索，不表示已逐字核验每条历史对话，也不是对项目会话的完整枚举。
 
 ## 尚未覆盖
 
-未获得项目全部聊天导出；未直接读取并审计当前 Agent Git 仓库；未验证本地数据库；没有正式实现后的 schema、检查点、Artifact Store、Judge Agent、Router Agent、Orchestrator state machine 或测试报告。文章中的架构接口仍属于讨论或建议，除非另有实现证据。
+未获得项目全部聊天导出；未直接读取并审计当前 Agent Git 仓库；未验证本地数据库；没有正式实现后的 Domain schema、StateTransition、Checkpoint Store、Artifact Store、Judge Agent、Router Agent、Orchestrator state machine、Operational PostgreSQL schema 或测试报告。文章中的架构接口仍属于讨论确认方向或设计建议，除非另有实现证据。
+
+Architecture Freeze 仅表示宏观职责边界暂时冻结，不表示具体数据模型、接口或算法已经实现。
 
 拿到聊天导出或 Agent 仓库实现后，应新增来源 ID 和覆盖条目，查找与现有结论冲突或遗漏的内容，再更新文章、状态和决策表。不要把未检索到解释为从未发生。
 
