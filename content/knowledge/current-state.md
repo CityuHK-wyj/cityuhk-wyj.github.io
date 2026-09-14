@@ -1,6 +1,6 @@
 # Baseball Agent 当前状态
 
-更新时间：2026-09-11。此页是后续接手的首要上下文。范围为可访问讨论和资料，非当前 Agent 仓库审计。
+更新时间：2026-09-14。此页是后续接手的首要上下文。范围为可访问讨论和资料，非当前 Agent 仓库审计。
 
 ## 目标
 
@@ -13,9 +13,11 @@
 - 2026-09 的项目讨论显示 Baseball Agent 已建立模块骨架与架构文档，但本博客仍未直接审计 Agent 仓库的当前业务实现。
 - 博客仓库 `CityuHK-wyj/cityuhk-wyj.github.io` 已创建并获得写入授权；博客使用 Markdown 内容源、目录与机器可读状态，GitHub Pages 由仓库构建流程生成。
 
-## 当前总体架构基线
+## 当前架构状态
 
-当前架构按大职责组织为六个主层，并由 Shared Knowledge、Runtime State 和 Governance 贯穿：
+截至 2026-09-14，宏观架构进入 **Architecture Freeze**：后续不再继续增加大层或独立 Agent，除非 Domain Modeling 发现结构性矛盾。接下来进入 Domain Modeling → ADR → Spec → Tickets → TDD / Implementation → Code Review。
+
+主架构按六个职责层组织：
 
 ```text
 Interaction
@@ -26,64 +28,115 @@ Interaction
 → Response
 ```
 
-### Normalization
+Shared Knowledge & Context、Runtime State、Governance 作为 cross-cutting 能力贯穿主流程。
 
-Semantic Understanding、Entity / Constraint / Objective normalization、Evidence / Artifact normalization、Metric / Feature transformation 都属于更大的标准化职责。Architecture Layer 不等于 Python package；不同代码模块可以独立实现，但在总体信息流上共享“把不稳定或异构输入转成 canonical representation”的目标。
+## 核心 Definition / State 模型
 
-### Shared Knowledge Services
+State 不再被视为执行链末端产物，而是从对应 Definition 创建时就伴随存在的 Runtime Projection：
 
-- RAG Knowledge Base
-- Metric Registry
-- Schema Registry / Schema RAG
-- Source Mapping
-- Entity Dictionary
-- League / Reference Context
+```text
+AnalysisObjective ─────────────── ObjectiveState
+        │                              ▲
+        ▼                              │ aggregate
+ArtifactRequirement ─────────── RequirementState
+        │                              ▲
+        ▼                              │ evaluate
+AgentTask → TaskExecution → Artifact → ArtifactAssessment
+```
 
-这些服务由 Semantic、Requirement Decomposer、Planner、Router、Judge、Analyzer、Formatter 等按需调用，不属于某一个固定步骤。
+Definition 描述“它是什么”，State 描述“它现在怎么样”。`Requirement State Service` 与 `Objective State Service` 负责更新状态，不单独设成 Sub-agent。
 
-### Runtime State & Governance
+## Requirement 与 Planner
 
-运行时状态倾向拆为多个 State Domain，而不是单个超级 AgentState：Query、Objective、Requirement/Planning、Routing、Execution、Artifact、Interaction、Permission、Budget 等。Validation / Policy、Logging / Observability、Retry / Budget、Read-only DB policy、Permission / Escalation policy 属于 cross-cutting governance。
+- Requirement Decomposer 在 Planner 前把 Objective 拆成 semantic-atomic Initial Requirements。
+- Initial Requirement 是原始用户问题的不可修改业务基线；Planner 不能删除、改写或降低其 `base_criticality`。
+- Planner 可以根据执行需要新增 `PLANNER_ADDED` supporting Requirement，但新增 Requirement 不能反过来偷偷提高原问题的 Completion 门槛。
+- Requirement 与 Artifact 共享统一 ArtifactDescriptor、ArtifactType、canonical Entity、typed Constraint 和 semantic data key。
+- `RequirementState` 主要反馈给 Planner。Planner 除状态外还应能看到相关 Artifact index、关键内容与 ArtifactAssessment summary，必要时再通过 Shared Context Service 展开 Artifact。
+- Planner 自己根据 RequirementState、Artifact、recoverability、round、budget 与 source availability 产生 `PLAN / REPLAN / STOP_PLANNING`。
+- `planner_terminal = true` 表示在当前条件下再次调用 Planner 不会产生有效新计划。除非用户约束、权限、数据源或 Artifact 发生新的外部变化，Orchestrator 应尊重 terminal state，防止死循环。
 
-## 讨论中明确的方向
+## Router 与 Orchestrator
 
-- 保留 `raw_query`，Intent 可多值，但 Intent 与 Tool 分离。
-- Semantic Layer 负责拆 `AnalysisObjective`；用户自己也不明确需求时，应生成少量 clarification options 让用户确认，而不是擅自固定问题含义。
-- Objective 使用受控主类 + 开放 subtype/description；Objective type 可提供 base priority，后续只调整 execution priority，不偷偷改变业务语义。
-- Definition 与 State 分离，例如 `AnalysisObjective ↔ ObjectiveState`、`AgentTask ↔ TaskExecution`。
-- Requirement Decomposer 作为 Planner 前的窄职责 Sub-agent，利用 Shared Knowledge Services 把 Objective 拆成 semantic-atomic `ArtifactRequirement`；它不选 Tool，也不能因当前 source 不方便而删除用户明确需求。
-- Requirement 的 `base_criticality` 表示它对原 Objective 的语义重要性，原则上近似 immutable；后续 round / budget 可以影响调度，但不能为了更容易 COMPLETE 而降级关键 Requirement。
-- `ArtifactRequirement` 与实际 Artifact 共享统一 `ArtifactDescriptor` / `ArtifactType`、canonical Entity、typed Constraint、semantic data key 等语言，避免 Requirement 与 Artifact 各自发明命名。
-- Artifact 本体尽量 immutable，保存 descriptor、payload、provenance、lineage；Feature Engine 计算结果也产生新的 Metric/Feature Artifact，并通过 `derived_from` 保留 data lineage。
-- Qualification 与 Sample Adequacy 分离：qualification 决定能否进入候选池，sample adequacy 决定样本能否支撑分析结论。`minimum_sample_size` 不再作为 Planner 随意填写的独立字段。
-- 赛季进行中的 qualification 需要 League/Reference Context；官方 season progress 与 local ingestion coverage 分开记录，避免把数据库最新日期误当联盟真实进度。
-- Planner 负责 logical execution strategy，并可提供 source preference；Router 是与 Planner 并列但权限更窄的 Routing Agent，结合 SourceMapping、freshness、cost、failures 和 available tools 选择实际 source/tool。
-- Router 可因 freshness / availability 违背 Planner preference，但不能绕过用户 source constraint 或 Governance hard policy。
-- Orchestrator 是管理者而非领域专家：调度、并行、阻塞、权限、预算、跨 State transition、replan timing 和用户 escalation 由它协调；Sub-agent 的专业工作由各自完成。
-- Re-planning 不需要第二个 Planner；同一 Planning Agent 支持 INITIAL_PLAN / REVISE_PLAN。Orchestrator 决定 when，Planner 决定 what，Router 决定 where/how。
-- Sub-agent 可以更新自己的 Local State，并提交 Report / Decision；跨 Domain / 全局 State transition 需由 Orchestrator 审阅。核心原则为 `Local ownership + reviewed global transition`。
-- `0 rows` 不等于 Tool failure；`retryable` 属于工具层，`recoverable` 属于 Agent 全局层。
-- Web Tool 可返回 RawWebResult；Evidence Extractor 负责转为 structured Evidence / Artifact，Router 只决定去哪找。
-- Artifact quality 不是 Artifact 固有分数，而是绑定 `artifact_id + requirement_id + objective_id` 的 contextual `ArtifactAssessment`。
-- 质量链路为 deterministic validation / hard gate → Judge/Critic Agent → ArtifactAssessment；Artifact Registry 管理索引、lineage、lifecycle、assessment ref，但不是质量裁判。
-- Judge 使用离散语义等级，不接管 Planner，也不能直接把 Objective 标成 COMPLETE。
-- Objective Sufficiency 先做 Critical Requirement hard gate，再做 weighted requirement coverage；不能用大量低重要性证据平均掉核心缺口。
-- ObjectiveState 倾向 `PENDING / IN_PROGRESS / COMPLETE / LIMITED / FAILED`；COMPLETE 可以保留 optional_gaps / limitations，并由 Formatter 反馈用户。
-- Selective re-plan 综合 gap criticality、recoverability、round count、attempt history、remaining budget 和 expected benefit；已完成部分冻结复用。
-- Semantic Clarification 必须询问用户；问题已明确后，免费且允许的数据源 fallback 可由 Agent 自主进行；付费 / 高成本 source 才需要用户授权。
-- PostgreSQL、DuckDB / Parquet 在当前 Runtime 中是只读分析资源；数据库/文件修改属于 System Administrator 权限，用户不能在对话中授权 Agent 越过这一边界。
-- `System State != LLM Context`；完整状态用于恢复/审计，LLM 只接收当前决策需要的投影。
+- Router 是独立但窄职责的 Routing Agent，负责为具体 Task 选择 source/tool；Planner 只给 semantic task 和 source preference。
+- Router 可以因 freshness / availability 推翻 Planner preference，但不能绕过 user constraint 或 Governance policy。
+- Orchestrator 是管理者，不做 Requirement decomposition、source 专业判断或证据语义评估。它负责调度、并行/等待/阻塞、权限、预算、跨 State transition、用户 escalation、接收 planner terminal 与 Finalization。
+- Sub-agent 采用 `Local ownership + reviewed global transition`：本地状态可由所属 Agent 更新，跨 Domain 影响由 Orchestrator 审阅。
 
-博客中的 JSON / Pydantic 片段均是设计示例，不代表已批准应用接口或已实现代码。
+## Artifact 与 ArtifactAssessment
+
+Artifact 本体尽量 immutable，保存 descriptor、payload、provenance、lineage 与时间信息。Feature Engine 的确定性计算结果也成为 Artifact，并通过 lineage 指向输入。
+
+Artifact quality 是 contextual `ArtifactAssessment`，绑定 `artifact_ref + requirement_ref + objective_ref`。Assessment 作为索引记录保存 deterministic result、Judge result、final assessment、summary、usable_for 与 limitations，不重复存 payload。
+
+质量判断采用：
+
+```text
+Deterministic Validator
+├── Hard Validation
+└── Soft Validation Signals
+        ↓
+Judge Agent
+        ↓
+Assessment Resolver
+        ↓
+ArtifactAssessment
+```
+
+Hard failure（错误实体、Artifact 损坏、必需字段完全缺失、明确时间范围完全错位、policy/integrity failure 等）不能被 Judge 覆盖。时间覆盖、freshness、样本规模、qualification 等作为 soft signals；Judge 可以根据当前 Requirement 相当程度调整最终 Assessment。
+
+Judge 必须输出简短 assessment summary，供 Planner 消费。
+
+## RequirementState、ObjectiveState 与 Finalization
+
+- `RequirementState` 汇总 Requirement 当前满足情况和相关 refs，主要给 Planner 用于下一轮 PlanningDecision。
+- `ObjectiveState` 根据 RequirementStates 更新，主要给 Orchestrator 用于整体协调和 Finalization。
+- ObjectiveState 倾向 `PENDING / IN_PROGRESS / COMPLETE / LIMITED / FAILED`。
+- COMPLETE 表示核心 Initial Requirements 足以回答，可以保留 optional gaps / limitations。
+- LIMITED 表示核心 Requirement 没有全部满足，但 Planner 已 terminal，现有结果仍足够形成受限回答。
+- FAILED 表示无法形成可靠的受限回答。
+
+## Response / CompletionReport
+
+Response Agent 只看到已经最终采用的结果，不看到上游 Sub-agent 的尝试过程。
+
+Orchestrator 在 Finalization 形成内部 `CompletionReport`，再投影成 `ResponsePackage`。用户回答相关内容包括：final accepted Artifacts、final accepted Evidence、真正影响结论的 critical Shared Knowledge、limitations、optional gaps、unresolved items 与 provenance。
+
+TaskAttempt、失败 routing、旧 plan、rejected evidence、Judge 内部工作过程等只保留在 System State / Trace。失败过程若影响结论，应先被提炼为 user-relevant limitation，而不是原样暴露给 Response Agent。
+
+## Shared Knowledge & Context
+
+Retrieval 不再作为独立业务 Sub-agent。它属于 Shared Knowledge & Context 的内部资料管理能力：Retrieve / Filter / Rank / Freshness Check / Project / Deliver。
+
+结构化 metadata 足够明确时可以代码 hard filter；非结构化历史、RAG、Web Evidence 等可以组合 semantic retrieval、full-text、reference traversal。Context Service 只负责递材料，不替 Planner、Router 或 Judge 做领域决策。
+
+长期原则：
+
+```text
+System State ≠ LLM Context
+Persist broadly, retrieve narrowly
+```
+
+跨 Run 新 Query 优先从 CompletionReport、final Artifacts、user-confirmed decisions 和 relevant Shared Knowledge 恢复上下文，不重新加载全部 attempt history。
+
+## Persistence / Checkpoint
+
+Checkpoint 是某个一致时刻各 State Domain 的版本引用集合，不是把整个 AgentState 和大型 Artifact 重新序列化一份。
+
+推荐 Snapshot + Event History：Artifact / Domain Result 独立持久化；Event / Trace 保存历史；Checkpoint 保存可恢复坐标。`WAITING_FOR_USER`、Plan accepted、任务批次完成、Assessment 完成、Plan revision、Objective terminal 等 meaningful transition 适合创建 checkpoint。
+
+Agent 自己的长期 Runtime 数据使用独立 Operational PostgreSQL（Control Plane），并可用 pgvector 支持历史/上下文索引；大型 Artifact payload 使用 Local/Object Storage。现有 `baseball_analytics` PostgreSQL 与 Parquet/DuckDB 保持 Data Plane，只读隔离。Redis 暂不作为第一版必需组件。
+
+## 权限与领域规则
+
+- Qualification 与 Sample Adequacy 分离；官方 League progress 与 local ingestion coverage 分离。
+- Semantic Clarification 必须询问用户；问题明确后，免费且允许的 source fallback 可自主执行；付费/高成本 source 才升级询问用户。
+- PostgreSQL、DuckDB / Parquet 在当前 Runtime 中为只读分析资源；数据库/文件修改属于 System Administrator 权限，用户不能通过对话授权越界。
 
 ## 尚未定稿
 
-统一 `ArtifactDescriptor`、`ArtifactRequirement`、Artifact / payload subtype、ArtifactAssessment 正式 schema；Requirement Matcher；QualificationRule / SampleAdequacyRule / LeagueStateSnapshot 的正式契约；PlannerReport / RoutingReport / JudgeReport 等 Sub-agent Report envelope；State Domain 与 transition contract；Objective hard gate / weighted coverage 的具体算法；Orchestrator review policy；checkpoint persistence；预算与成本策略；LangGraph 是否以及何时引入。
-
-## 建议的下一步
-
-继续 Domain Modeling，不再增加新的大层。优先把共享 Artifact contract、多个 State Domain、Sub-agent Report / Decision Contract 和 Orchestrator transition policy 定清，再进入 spec/tickets。实现时保持“窄职责 Sub-agent + deterministic governance + shared canonical models”的方向。
+宏观架构已冻结，但正式 Domain Contract 尚未冻结。下一阶段需要定稿：`AnalysisObjective / ObjectiveState`、`ArtifactRequirement / RequirementState`、`AgentTask / TaskExecution`、Artifact / ArtifactAssessment、AgentReport、PlanningDecision、Checkpoint、ContextPackage；Requirement Matcher；StateTransition contract；Planner terminal reason；Objective / Requirement 状态算法；Persistence 表结构与版本机制；Context projection policy；具体 Prompt、LangGraph 与 API 实现。
 
 ## 本博客的状态
 
-截至 2026-09-11 仍登记 9 篇阶段性文章，没有新增文章。本轮继续修订 Task Planner、Validation/Feedback 与第 9 篇总体架构文章，并同步本文、`decisions.md`、`project-state.json`、`sources.md` 与目录元数据。
+截至 2026-09-14 仍登记 9 篇阶段性文章。本轮没有新增文章，只修订现有第 4、5、9 篇以及本文、`decisions.md`、`project-state.json`、`sources.md` 与目录元数据。
