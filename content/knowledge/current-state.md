@@ -1,23 +1,52 @@
 # Baseball Agent 当前状态
 
-更新时间：2026-09-14。此页是后续接手的首要上下文。范围为可访问讨论和资料，非当前 Agent 仓库审计。
+更新时间：2026-09-15。此页是后续接手的首要上下文。与上一版不同，本轮已直接审计 `CityuHK-wyj/baseball_agent` 的 GitHub 分支、提交、关键代码、测试与 handoff 文档，因此“实现状态”不再只来自讨论摘要。
 
 ## 目标
 
-构建可解释、可验证的 MLB 数据分析 Agent：保留用户约束，跨 PostgreSQL、Parquet 与 Web 获取证据，通过程序计算指标，再生成带来源与限制的中文回答。
+构建可解释、可验证的 MLB 数据分析 Agent：保留用户原问题和确认约束，跨 PostgreSQL、Parquet/DuckDB、Web 与长期 Shared Knowledge 获取证据，通过确定性计算与质量评估形成 Artifact / Evidence，再生成带来源、限制和 provenance 的中文回答。
 
-## 有证据的实现状态
+## 当前阶段
 
-- 历史脚本存在四工具注册与多轮调用循环：热库、冷库、联网赛季数据、姓名反查。未在本次执行这些代码。
-- 用户曾报告已存入 2024–2026 Statcast 热数据，2015–2023 Parquet 历史数据，以及部分高阶指标。没有验证当前完整性与截止日。
-- 2026-09 的项目讨论显示 Baseball Agent 已建立模块骨架与架构文档，但本博客仍未直接审计 Agent 仓库的当前业务实现。
-- 博客仓库 `CityuHK-wyj/cityuhk-wyj.github.io` 已创建并获得写入授权；博客使用 Markdown 内容源、目录与机器可读状态，GitHub Pages 由仓库构建流程生成。
+宏观架构已经完成 Architecture Freeze，并且核心架构已经实际落地。项目当前阶段不再是“Domain Modeling 前准备”，而是：
 
-## 当前架构状态
+```text
+Architecture Freeze
+→ Domain Modeling / ADR / Implementation
+→ Runtime Audit & Hardening
+→ Shared Knowledge V1
+→ v0.1 Integration
+→ Real Data Verification
+→ Final Review / Release
+```
 
-截至 2026-09-14，宏观架构进入 **Architecture Freeze**：后续不再继续增加大层或独立 Agent，除非 Domain Modeling 发现结构性矛盾。接下来进入 Domain Modeling → ADR → Spec → Tickets → TDD / Implementation → Code Review。
+当前最新产品整合分支为：
 
-主架构按六个职责层组织：
+```text
+astra/v0.1-integration
+```
+
+它已经通过真实 Git merge 合并：
+
+```text
+gpt56/runtime-audit-hardening
+        +
+agent/shared-knowledge
+```
+
+因此目前应把 Astra 分支视为 v0.1 integration candidate，而不是分别把各工作分支当成独立产品。
+
+## 多 Agent 实现轨迹
+
+- `codex/architecture-implementation`：建立安全 Domain foundation，隔离旧 credential-bearing ancestry，并冻结一批关键 invariant。
+- `agent/deepseek-implementation-safe`：把冻结架构实现成完整 deterministic Agent Runtime，包括 Planning、Routing、Artifact、Assessment、State、Persistence、Resume、Context、LLM seams、CLI 与测试。
+- `gpt56/runtime-audit-hardening`：把实现与测试都视为不可信对象做独立攻击，修复 evidence leakage、DuckDB filesystem bypass、SourceMapping wiring、LLM output validation、Web Evidence、Clarification / Permission lifecycle 等问题。
+- `agent/shared-knowledge`：建立 MLB Shared Knowledge V1，包括规则、术语、球队、球员、社区来源、知识持久化、provenance、freshness、versioning 与 ContextSource。
+- `astra/v0.1-integration`：真实 merge runtime hardening 与 Shared Knowledge，并继续补 ConstraintRevision、permission expiry、default composition、knowledge runtime projection、bounded context、persistent metrics 与部分 live probe。
+
+## 当前主流程
+
+主流程仍保持六层：
 
 ```text
 Interaction
@@ -28,115 +57,301 @@ Interaction
 → Response
 ```
 
-Shared Knowledge & Context、Runtime State、Governance 作为 cross-cutting 能力贯穿主流程。
+但这些现在已有真实实现，而不只是架构图。
 
-## 核心 Definition / State 模型
-
-State 不再被视为执行链末端产物，而是从对应 Definition 创建时就伴随存在的 Runtime Projection：
+典型 Runtime flow：
 
 ```text
-AnalysisObjective ─────────────── ObjectiveState
-        │                              ▲
-        ▼                              │ aggregate
-ArtifactRequirement ─────────── RequirementState
-        │                              ▲
-        ▼                              │ evaluate
-AgentTask → TaskExecution → Artifact → ArtifactAssessment
+User Query
+→ Semantic Normalization
+→ AnalysisObjective
+→ Requirement Decomposer
+→ ArtifactRequirement
+→ Planner
+→ SourceMapping / Router
+→ Tool Execution
+→ Artifact / Evidence
+→ Deterministic Validation
+→ Judge
+→ ArtifactAssessment
+→ RequirementState
+→ ObjectiveState
+→ Planner REPLAN / STOP
+→ CompletionReport
+→ ResponsePackage
+→ Response
 ```
 
-Definition 描述“它是什么”，State 描述“它现在怎么样”。`Requirement State Service` 与 `Objective State Service` 负责更新状态，不单独设成 Sub-agent。
+## Definition / State / Produced Knowledge
 
-## Requirement 与 Planner
-
-- Requirement Decomposer 在 Planner 前把 Objective 拆成 semantic-atomic Initial Requirements。
-- Initial Requirement 是原始用户问题的不可修改业务基线；Planner 不能删除、改写或降低其 `base_criticality`。
-- Planner 可以根据执行需要新增 `PLANNER_ADDED` supporting Requirement，但新增 Requirement 不能反过来偷偷提高原问题的 Completion 门槛。
-- Requirement 与 Artifact 共享统一 ArtifactDescriptor、ArtifactType、canonical Entity、typed Constraint 和 semantic data key。
-- `RequirementState` 主要反馈给 Planner。Planner 除状态外还应能看到相关 Artifact index、关键内容与 ArtifactAssessment summary，必要时再通过 Shared Context Service 展开 Artifact。
-- Planner 自己根据 RequirementState、Artifact、recoverability、round、budget 与 source availability 产生 `PLAN / REPLAN / STOP_PLANNING`。
-- `planner_terminal = true` 表示在当前条件下再次调用 Planner 不会产生有效新计划。除非用户约束、权限、数据源或 Artifact 发生新的外部变化，Orchestrator 应尊重 terminal state，防止死循环。
-
-## Router 与 Orchestrator
-
-- Router 是独立但窄职责的 Routing Agent，负责为具体 Task 选择 source/tool；Planner 只给 semantic task 和 source preference。
-- Router 可以因 freshness / availability 推翻 Planner preference，但不能绕过 user constraint 或 Governance policy。
-- Orchestrator 是管理者，不做 Requirement decomposition、source 专业判断或证据语义评估。它负责调度、并行/等待/阻塞、权限、预算、跨 State transition、用户 escalation、接收 planner terminal 与 Finalization。
-- Sub-agent 采用 `Local ownership + reviewed global transition`：本地状态可由所属 Agent 更新，跨 Domain 影响由 Orchestrator 审阅。
-
-## Artifact 与 ArtifactAssessment
-
-Artifact 本体尽量 immutable，保存 descriptor、payload、provenance、lineage 与时间信息。Feature Engine 的确定性计算结果也成为 Artifact，并通过 lineage 指向输入。
-
-Artifact quality 是 contextual `ArtifactAssessment`，绑定 `artifact_ref + requirement_ref + objective_ref`。Assessment 作为索引记录保存 deterministic result、Judge result、final assessment、summary、usable_for 与 limitations，不重复存 payload。
-
-质量判断采用：
+核心模型保持：
 
 ```text
-Deterministic Validator
-├── Hard Validation
-└── Soft Validation Signals
-        ↓
-Judge Agent
-        ↓
-Assessment Resolver
-        ↓
-ArtifactAssessment
+Definition
+- AnalysisObjective
+- ArtifactRequirement
+- AgentTask
+
+Produced Knowledge
+- Artifact
+- ArtifactAssessment
+
+Runtime State
+- ObjectiveState
+- RequirementState
+- TaskExecution / Attempt
 ```
 
-Hard failure（错误实体、Artifact 损坏、必需字段完全缺失、明确时间范围完全错位、policy/integrity failure 等）不能被 Judge 覆盖。时间覆盖、freshness、样本规模、qualification 等作为 soft signals；Judge 可以根据当前 Requirement 相当程度调整最终 Assessment。
+`ObjectiveState` 与 `RequirementState` 从对应 Definition 创建时就存在；State Service 负责持续更新，不新增同职责 Evaluator Agent。
 
-Judge 必须输出简短 assessment summary，供 Planner 消费。
+Initial Requirement 仍是不可修改业务基线；Planner 可新增 `PLANNER_ADDED` supporting Requirement，但不能删除、改写或降低原始 Requirement 的语义重要性，也不能借新增 Requirement 偷偷提高原 Objective 的完成门槛。
 
-## RequirementState、ObjectiveState 与 Finalization
+## Planner / Router / Orchestrator
 
-- `RequirementState` 汇总 Requirement 当前满足情况和相关 refs，主要给 Planner 用于下一轮 PlanningDecision。
-- `ObjectiveState` 根据 RequirementStates 更新，主要给 Orchestrator 用于整体协调和 Finalization。
-- ObjectiveState 倾向 `PENDING / IN_PROGRESS / COMPLETE / LIMITED / FAILED`。
-- COMPLETE 表示核心 Initial Requirements 足以回答，可以保留 optional gaps / limitations。
-- LIMITED 表示核心 Requirement 没有全部满足，但 Planner 已 terminal，现有结果仍足够形成受限回答。
-- FAILED 表示无法形成可靠的受限回答。
+职责边界已经落地：
 
-## Response / CompletionReport
+- Planner 决定 `PLAN / REPLAN / STOP_PLANNING`，依据 RequirementState、ArtifactAssessment summary、recoverability、round、budget 与 source availability。
+- Router 决定具体 tool/source；SourceMapping 已进入真实 Runtime，并且 mapped tool 约束高于 Planner preference。
+- Orchestrator 负责调度、等待、权限、预算、checkpoint、cross-domain transition 与 Finalization，不重新做 Planner / Router / Judge 的专业判断。
+- `planner_terminal` 在无外部变化时防止重复规划；新的 clarification、permission、constraint revision、source 或 Artifact 可以按显式理由重新打开。
 
-Response Agent 只看到已经最终采用的结果，不看到上游 Sub-agent 的尝试过程。
+## Clarification / Permission / Constraint Revision
 
-Orchestrator 在 Finalization 形成内部 `CompletionReport`，再投影成 `ResponsePackage`。用户回答相关内容包括：final accepted Artifacts、final accepted Evidence、真正影响结论的 critical Shared Knowledge、limitations、optional gaps、unresolved items 与 provenance。
+交互升级已经变成持久化生命周期，而不是 UI 占位符。
 
-TaskAttempt、失败 routing、旧 plan、rejected evidence、Judge 内部工作过程等只保留在 System State / Trace。失败过程若影响结论，应先被提炼为 user-relevant limitation，而不是原样暴露给 Response Agent。
-
-## Shared Knowledge & Context
-
-Retrieval 不再作为独立业务 Sub-agent。它属于 Shared Knowledge & Context 的内部资料管理能力：Retrieve / Filter / Rank / Freshness Check / Project / Deliver。
-
-结构化 metadata 足够明确时可以代码 hard filter；非结构化历史、RAG、Web Evidence 等可以组合 semantic retrieval、full-text、reference traversal。Context Service 只负责递材料，不替 Planner、Router 或 Judge 做领域决策。
-
-长期原则：
+### Clarification
 
 ```text
-System State ≠ LLM Context
+ambiguous query
+→ ClarificationRequest
+→ InteractionRecord
+→ WAITING_FOR_USER checkpoint
+→ answer
+→ USER_CONFIRMED constraint
+→ same-run resume
+```
+
+重复 confirmation fail closed，并避免重复 execution。
+
+### Permission
+
+```text
+paid / high-cost source
+→ PermissionRequest
+→ WAITING_FOR_USER
+→ approve / reject
+→ same-run resume
+```
+
+Permission 是 scoped、single-use / auditable，并有 expiry / stale validation。用户批准不能覆盖 `SYSTEM_POLICY`。
+
+### Constraint Revision
+
+```text
+USER_CONSTRAINT blocks useful legal source
+→ ConstraintRevisionRequest
+→ WAITING_FOR_USER
+→ accept / reject
+→ same-run resume
+```
+
+接受后形成 `USER_CONFIRMED` revision；拒绝则保留原约束。System Policy 不可重新协商。
+
+## Artifact / Validation / Judge
+
+Artifact 尽量 immutable，保存 descriptor、payload/ref、provenance、lineage 与时间信息。Feature Engine 输出也统一成为 Artifact。
+
+`ArtifactAssessment` 绑定 `artifact_ref + requirement_ref + objective_ref`，同一 Artifact 对不同 Requirement 可以得到不同 Assessment。
+
+质量链路：
+
+```text
+Artifact
+→ Deterministic Validator
+   ├── Hard Validation
+   └── Soft Signals
+→ Judge
+→ ArtifactAssessment
+```
+
+Hard failure 不能被 Judge 覆盖；soft signals 可由 Judge 根据当前 Requirement 解释。
+
+GPT-5.6 的独立 audit 曾发现并修复跨 Objective accepted-evidence leakage，说明 Response / Context boundary 已经经历过实际 adversarial hardening，而不是只存在设计原则。
+
+## SQL / DuckDB 安全
+
+PostgreSQL、DuckDB / Parquet 继续是只读 Data Plane。用户不能通过聊天授权写操作。
+
+当前 guard 已专门攻击并阻断多类绕过，包括 CTE hidden mutation、multi-statement、DuckDB ATTACH / COPY / extension loading、URI、动态文件路径与 path traversal。执行拒绝发生在危险操作进入底层执行前。
+
+## Persistence / Checkpoint / Resume
+
+Agent Runtime 使用独立 Control Plane，不把运行状态写进 `baseball_analytics`。
+
+当前实现包含：
+
+- OperationalStore Protocol；
+- SQLite dev/test implementation；
+- PostgreSQL implementation（live production path仍待真实验证）；
+- ArtifactStorage；
+- payload-before-state 持久化顺序；
+- Checkpoint；
+- Resume / rehydrate；
+- Artifact reuse 与 duplicate-execution prevention；
+- persisted interaction lifecycle；
+- persisted RunMetrics events。
+
+Checkpoint 是恢复坐标，不是 giant AgentState dump。
+
+## Shared Knowledge V1
+
+Shared Knowledge 已从架构概念变成真实长期知识层。
+
+物理来源与运行形态：
+
+```text
+knowledge/sources/*.json
+knowledge/seed/*.json
+        ↓
+ingestion / validation / staging
+        ↓
+Knowledge Store
+        ↓
+KnowledgeContextSource
+        ↓
+ContextService
+```
+
+开发/测试默认：
+
+```text
+.runtime/knowledge.db
+```
+
+生产方向：独立 PostgreSQL `knowledge` schema，与 `baseball_analytics` Data Plane 和 runtime object tables 隔离。
+
+当前 V1 覆盖：
+
+- 2026 Official Baseball Rules 的主要规则结构与编号规则；
+- roster / transaction / CBA-sensitive 基础规则；
+- 标准统计、sabermetrics、Statcast、pitch、plate discipline、qualification、scouting terminology；
+- 当前 30 支 MLB 球队、30 个主场、league/division、双语 aliases 与 franchise lineage；
+- notable active / historical player identity；
+- awards、league/postseason context 与重要历史 era；
+- trusted source registry 与 community creator/source directory。
+
+每个 KnowledgeItem 可以携带 authority、effective dates、as_of、last_verified、verification status 与 version。
+
+原则：
+
+```text
+Collected Knowledge != Active Knowledge
 Persist broadly, retrieve narrowly
 ```
 
-跨 Run 新 Query 优先从 CompletionReport、final Artifacts、user-confirmed decisions 和 relevant Shared Knowledge 恢复上下文，不重新加载全部 attempt history。
+## Shared Knowledge 与 RAG
 
-## Persistence / Checkpoint
+RAG / pgvector 仍有意 deferred。
 
-Checkpoint 是某个一致时刻各 State Domain 的版本引用集合，不是把整个 AgentState 和大型 Artifact 重新序列化一份。
+当前优先：canonical lookup、alias lookup、structured filter、full-text / reference traversal。对于球队、规则编号、metric definition 等确定性结构化知识，这比统一向量化更准确。
 
-推荐 Snapshot + Event History：Artifact / Domain Result 独立持久化；Event / Trace 保存历史；Checkpoint 保存可恢复坐标。`WAITING_FOR_USER`、Plan accepted、任务批次完成、Assessment 完成、Plan revision、Objective terminal 等 meaningful transition 适合创建 checkpoint。
+只有真实使用证明自然语言语义召回不足时，再增加 embedding / semantic retrieval。Embedding 只能是可重建索引，不是知识 truth source。
 
-Agent 自己的长期 Runtime 数据使用独立 Operational PostgreSQL（Control Plane），并可用 pgvector 支持历史/上下文索引；大型 Artifact payload 使用 Local/Object Storage。现有 `baseball_analytics` PostgreSQL 与 Parquet/DuckDB 保持 Data Plane，只读隔离。Redis 暂不作为第一版必需组件。
+## Default Composition Root
 
-## 权限与领域规则
+Astra 已增加真实默认 composition，使系统不再只是“有很多模块但没人负责拼起来”。默认 Runtime 会组装：
 
-- Qualification 与 Sample Adequacy 分离；官方 League progress 与 local ingestion coverage 分离。
-- Semantic Clarification 必须询问用户；问题明确后，免费且允许的 source fallback 可自主执行；付费/高成本 source 才升级询问用户。
-- PostgreSQL、DuckDB / Parquet 在当前 Runtime 中为只读分析资源；数据库/文件修改属于 System Administrator 权限，用户不能通过对话授权越界。
+```text
+Knowledge Store
+Entity Dictionary
+Metric Registry
+Schema Registry
+SourceMappingResolver
+ContextService
+Operational Store
+Artifact Storage
+Router / Tools
+Assessment / Judge
+Planner
+AnalysisPipeline
+```
 
-## 尚未定稿
+Shared Knowledge 已能投影为 EntityDictionary 与 MetricRegistry，并通过 ContextService 向 Planner / Judge / Response 提供 bounded context。
 
-宏观架构已冻结，但正式 Domain Contract 尚未冻结。下一阶段需要定稿：`AnalysisObjective / ObjectiveState`、`ArtifactRequirement / RequirementState`、`AgentTask / TaskExecution`、Artifact / ArtifactAssessment、AgentReport、PlanningDecision、Checkpoint、ContextPackage；Requirement Matcher；StateTransition contract；Planner terminal reason；Objective / Requirement 状态算法；Persistence 表结构与版本机制；Context projection policy；具体 Prompt、LangGraph 与 API 实现。
+## Synthetic Data 的新边界
 
-## 本博客的状态
+SyntheticDataTool 仍用于测试完整 Agent loop，但不再默认伪装成真实 analytics source。
 
-截至 2026-09-14 仍登记 9 篇阶段性文章。本轮没有新增文章，只修订现有第 4、5、9 篇以及本文、`decisions.md`、`project-state.json`、`sources.md` 与目录元数据。
+只有显式 `--demo` 才允许 SyntheticDataTool：
+
+```bash
+python -m app.cli ask "Judge最近30天表现怎么样？" --demo
+```
+
+正常模式没有真实数据时应暴露缺口，而不是用 fake data 生成看似真实的 MLB 结论。
+
+## 已验证的用户体验切片
+
+当前 integration tests 已覆盖类似：
+
+```text
+“DFA是什么意思？”
+→ Shared Knowledge
+→ COMPLETE
+→ accepted evidence 来自 shared-knowledge
+```
+
+```text
+“道奇属于哪个分区？”
+→ 中文 alias
+→ canonical LAD
+→ National League West
+```
+
+以及：
+
+- Hernandez 多候选 → Clarification → same-run resume；
+- paid tool → PermissionRequest → scoped approval；
+- blocked user source constraint → ConstraintRevisionRequest；
+- accepted evidence / context 跨 run、跨 objective 隔离；
+- persisted checkpoint / resume 不重复执行。
+
+## Live Integration 状态
+
+必须区分“测试闭环”和“真实来源已验证”。
+
+截至 2026-09-15：
+
+- test suite 已增长到 300+ 级别，开发分支持续在稳定 checkpoint 上保持全绿；
+- 真实 Parquet 已成功做 bounded read probe；复杂 high-zone 查询暴露历史 schema 缺少 `sz_bot / sz_top` 一类字段，需要继续适配；
+- MLB Stats API 曾成功返回 30 队 reference 数据，但后续网络存在 timeout，因此完整 WebEvidenceTool live E2E 仍是 partial；
+- 最近一次本地 `baseball_analytics` PostgreSQL probe 连接不可用，真实 read-only PostgreSQL E2E 仍待完成；
+- Operational PostgreSQL 代码路径已实现，但 production live path 未完整验证。
+
+因此当前更准确的标签是：
+
+> **architecture-complete / heavily-tested v0.1 integration candidate**
+
+不是 production-ready。
+
+## Git / Release 状态
+
+当前安全开发线与旧 `main` 因 credential 清理历史而不是普通线性 ancestry。GitHub compare 显示 `main` 与 `astra/v0.1-integration` 不能按普通“ahead N commits”理解。
+
+因此最终进入 `main` 需要单独做 release integration。当前倾向：完成 final review 后，用明确的 reviewed v0.1 snapshot / release commit 把稳定 tree 发布到 main，同时保留安全开发分支的完整研发历史，而不是草率把 unrelated histories 强行混合。
+
+## 下一阶段
+
+当前不再需要横向增加大型模块。优先级是：
+
+1. 真实 `baseball_analytics` PostgreSQL read-only E2E；
+2. 2015–2023 Parquet schema 与 SchemaRegistry / Feature Engine 对齐；
+3. 跑通复杂真实问题，例如“两好球后 >95 mph 高区快速球 EV Top 5 + salary value”；
+4. 完整 WebEvidenceTool live provider E2E；
+5. 清理 README / handoff / development-status 中历史残留；
+6. final architecture / security / integration review；
+7. 安全发布到 `main` 并标记 v0.1。
+
+## 本博客状态
+
+截至 2026-09-15，博客从 9 篇增加到 10 篇。新增第 10 篇记录 Architecture Freeze 之后的真实工程落地、多 Agent 分工、runtime audit、Shared Knowledge V1 与 Astra integration；同时本文、`decisions.md`、`project-state.json`、`sources.md` 与目录元数据同步更新。
