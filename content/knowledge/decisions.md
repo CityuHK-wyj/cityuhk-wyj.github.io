@@ -1,88 +1,102 @@
 # 决策与开放问题
 
-整理日期：2026-09-14。ID 是本博客为后续引用新增的文档标识，不代表历史中已使用该编号。
+整理日期：2026-09-15。ID 是本博客为后续引用新增的文档标识，不代表历史中已使用该编号。D001–D066 主要记录架构收敛；D067 起记录实现、审计与 v0.1 integration 阶段确认的新边界。实现状态优先依据 S6 的 GitHub 仓库直接审计。
 
 | ID | 状态 | 内容 | 依据 / 后续工作 |
 | --- | --- | --- | --- |
-| D001 | 讨论明确 | 保留原问题 raw_query 和已确认约束 | S1；防止多轮丢失条件 |
-| D002 | 讨论明确 | 允许模型写 SQL，并由程序校验 | S1；验证器尚无实现证据 |
-| D003 | 历史代码可见 | 热库、冷库、联网与姓名反查四工具 | S2；当前 Agent 仓库未核验 |
-| D004 | 讨论明确 | 实体歧义可向用户澄清，内部关联依赖 canonical ID | S1/S5；姓名只作为显示与解析输入 |
-| D005 | 讨论明确 | 任务参数与结果采用标准类型 | S1/S5；具体 schema 仍待定 |
-| D006 | 讨论明确 | Plan 与 Execution 分离：AgentTask 不直接承载运行状态 | S5；TaskExecution / TaskAttempt 保存实际执行 |
-| D007 | 讨论明确 | 保存每一次 TaskAttempt 历史，用于 retry、debug、evaluation 与恢复 | S5；正常 LLM context 不直接包含完整历史 |
-| D008 | 讨论明确 | 技术性错误由 Executor 重试，语义性失败进入评估与 Planning Loop | S5；需定义错误分类和预算 |
-| D009 | 讨论明确 | 0 rows 与 tool failure 分离 | S1/S5；业务意义由上层评估 |
-| D010 | 讨论明确 | 数据及 ToolResult 记录来源 | S1/S5；工具级 provenance 与数据级 provenance 同时保留 |
-| D011 | 讨论明确 | retryable 属于 Tool 层，recoverable 属于 Agent 层 | S5；避免把换源能力混进工具错误状态 |
-| D012 | 讨论明确 | 任务的数据依赖优先用结构化 ArtifactRequirement 表达 | S5；depends_on 主要保留纯 workflow dependency |
-| D013 | 用户约束 | 避免过细 artifact_id / 自由字符串命名体系 | S1/S5；schema 固定、实例动态 |
-| D014 | 讨论明确 | ArtifactRequirement 的过滤条件复用 typed Constraint，而非自由 dict | S5；统一语义并减少字段漂移 |
-| D015 | 讨论明确 | Planner 保持在 semantic level，physical schema 映射由 Registry / Schema 层处理 | S5；避免 Planner 与具体数据源耦合 |
-| D016 | 讨论明确 | Web Router 只决定去哪里找；RawWebResult 由 Evidence Extractor 做非结构化到结构化转换 | S5；数据库事实与外部 claim 保持证据类型差异 |
-| D017 | 讨论明确 | AgentState 与 LLM Context View 分离 | S5；只把经筛选的有效状态送入模型，降低上下文污染 |
-| D018 | 讨论明确 | collected data 不自动等于 approved data，应经过 validation / quality gate | S5；Candidate → APPROVED / LIMITED / REJECTED |
-| D019 | 讨论明确 | confidence 更接近 analysis sufficiency，不是模型正确概率 | S5；仍有 recoverable gap 时继续循环，无可恢复缺口时可 LIMITED 退出 |
-| D020 | 讨论明确 | Metric 层保持简单，核心为 MetricDefinition + SourceMapping | S5；组合多个来源满足需求的工作交给 Planner |
-| D021 | 讨论明确 | SourceMapping 采用 DIRECT / CALCULATED / 无映射的简化语义 | S5；CALCULATED 表示 Feature Engine 可确定性计算 |
-| D022 | 讨论明确 | Metric Registry 负责 execution correctness，RAG 负责 semantic reasoning 与动态知识 | S5；不把确定性字段映射完全交给向量检索 |
-| D023 | 讨论明确 | Semantic Understanding Layer 负责拆 AnalysisObjective；Planner 不重复解释用户意图 | S5；避免意图漂移 |
-| D024 | 讨论明确 | Objective type 使用受控主类 + 开放 subtype/description | S5；既提供稳定边界，又避免 Enum 过度限制自主性 |
-| D025 | 讨论明确 | Objective type 可提供 base priority，Planner 调整 execution priority | S5；Router 只据此调整执行策略，不改业务优先级 |
-| D026 | 讨论明确 | Semantic Layer 可补充隐含 Constraint，但必须标记为系统推断 | S5；用户明确约束优先且可覆盖推断 |
-| D027 | 讨论明确 | 增加独立 Judge / Critic Agent 评审 collected data，但不接管 Planner | S5；Rule first, LLM second |
-| D028 | 讨论明确 | Judge 使用离散质量等级而非伪精确连续 confidence | S5；倾向 STRONG / ACCEPTABLE / WEAK / REJECT，并附理由 |
-| D029 | 讨论明确 | sufficiency 分 Artifact 与 Objective 两级；最终循环按 Objective 计算 | S5；单个 Artifact 合格不代表整个问题充分 |
-| D030 | 讨论明确 | 已完成 Objective 可冻结和复用，未完成部分继续处理；Query 允许 PARTIAL 结果 | S5；支持部分问题先可靠回答 |
-| D031 | 讨论明确 | 总体架构分 Main Agent Flow、Shared Knowledge Services、Runtime & Governance 三类 | S5；避免把 RAG、Registry、Validation、AgentState 误画成线性节点 |
-| D032 | 讨论明确 | Validation / Policy 是 cross-cutting governance | S5；覆盖输入、语义、计划、SQL/tool、Artifact 与最终 claim |
-| D033 | 讨论明确 | 主流程压缩为 Interaction、Normalization、Planning & Orchestration、Data & Tool、Evaluation & Sufficiency、Response 六个大层 | S5；Architecture Layer 不等于 Python package |
-| D034 | 讨论明确 | Requirement Decomposer 在 Planner 前把 Objective 拆成 semantic-atomic ArtifactRequirement | S5；不选 Tool，不因 source 不便删除用户需求 |
-| D035 | 讨论明确 | Requirement 的 base_criticality 是语义重要性，原则上近似 immutable | S5；执行优先级可变，但不能伪造 COMPLETE |
-| D036 | 讨论明确 | ArtifactRequirement 与实际 Artifact 共用统一 ArtifactDescriptor / ArtifactType / canonical semantic keys | S5；Requirement = what we need，Artifact = what we have |
-| D037 | 讨论明确 | Feature Engine 的确定性计算结果也进入统一 Artifact 体系，并通过 derived_from 保留 data lineage | S5；避免私有结果格式 |
-| D038 | 讨论明确 | QualificationRule 与 SampleAdequacyRule 分离 | S5；前者决定 eligibility，后者决定样本能否支撑结论 |
-| D039 | 讨论明确 | 赛季中的 qualification 需要 League/Reference Context，official season progress 与 local ingestion coverage 分开 | S5；避免用数据库最大日期代替真实赛季进度 |
-| D040 | 讨论明确 | Planner 可以给 source preference；Router 负责实际 source/tool selection | S5；Router 可推翻 preference，但不能绕过 constraint / policy |
-| D041 | 讨论明确 | Orchestrator 是工作流管理者，不是领域专家 | S5；负责调度、状态、权限、预算、阻塞、用户升级和 Finalization |
-| D042 | 已由 D061 修订 | 早期边界为 Orchestrator 决定 when to replan、Planner 决定 what；最新改为 Planner 基于 RequirementState 自己返回 PLAN / REPLAN / STOP_PLANNING | S5；保留旧决策以显示演变 |
-| D043 | 讨论明确 | Runtime State 拆成多个独立 State Domain，而不是一个巨大 AgentState dict | S5；Query/Objective/Requirement/Planning/Routing/Execution/Artifact/Interaction/Permission/Budget 等 |
-| D044 | 讨论明确 | State 更新采用 Local ownership + reviewed global transition | S5；Sub-agent 可写自己的 Local State，跨 Domain 变化由 Orchestrator 审阅 |
-| D045 | 讨论明确 | 用户需求本身不明确时必须 clarification，并优先提供少量选项供用户选择 | S5；模型可推荐但不能替用户决定问题含义 |
-| D046 | 讨论明确 | 问题明确后，免费且允许的数据源 fallback 可自主进行；付费 / 高成本 source 才升级询问用户 | S5；减少不必要打断，同时保留成本授权 |
-| D047 | 用户约束 | PostgreSQL、DuckDB / Parquet 在 Agent Runtime 中为只读资源；修改属于 System Administrator 权限，用户不能对话授权越界 | S5；应由 SQL AST + sandbox / read-only policy 强制 |
-| D048 | 讨论明确 | Artifact quality 是绑定 Objective / Requirement 的 contextual ArtifactAssessment；Artifact Registry 管理但不充当质量裁判 | S5；同一 Artifact 对不同问题可有不同适用性 |
-| D049 | 讨论明确 | Objective Sufficiency 先做 Critical Requirement hard gate，再做 weighted requirement coverage | S5；低重要性证据不能平均掉核心缺口 |
-| D050 | 讨论明确 | Objective COMPLETE 可以保留 optional_gaps / limitations 并反馈用户 | S5；COMPLETE 表示核心问题可回答，不代表所有信息完美齐全 |
-| D051 | 讨论明确 | Response Agent 只消费最终 accepted outputs，不看到上游 attempt history、失败 route、旧 plan 或被拒绝证据 | S5；避免上下文污染与被淘汰信息重新进入答案 |
-| D052 | 讨论明确 | Finalization 必须保留最终采用的 Artifact、Evidence、provenance 与真正影响结论的关键 Shared Knowledge | S5；内部 schema mapping、unused RAG、执行过程默认不呈现给用户 |
-| D053 | 讨论明确 | CompletionReport 由 Orchestrator 生成，ResponsePackage 是其面向回答的投影 | S5；系统工作总结与用户文案生成分离 |
-| D054 | 讨论明确 | Checkpoint 是一致状态坐标，不复制全部 Artifact / attempts；采用 Snapshot + Event History 思路 | S5；Artifact/Result 独立持久化，Event 保存历史，Checkpoint 用于恢复 |
-| D055 | 讨论明确 | Agent Runtime 使用独立 Operational PostgreSQL 作为 Control Plane，并可用 pgvector 支持历史/上下文索引 | S5；与 baseball analytics 数据库物理/权限隔离 |
-| D056 | 讨论明确 | 大型 Artifact payload 放 Local/Object Storage；Redis 暂不作为第一版必需组件 | S5；数据库保存 metadata/provenance/lineage，payload 独立存储 |
-| D057 | 讨论明确 | Retrieval 不设独立业务 Sub-agent，而是 Shared Knowledge & Context 的内部资料管理能力 | S5；负责 Retrieve/Filter/Rank/Freshness/Projection/Delivery，不做新的领域判断 |
-| D058 | 讨论明确 | ObjectiveState 与 RequirementState 从 Definition 创建时就伴随存在，由 State Service 持续更新 | S5；State 是 runtime projection，不是流水线末端产物 |
-| D059 | 讨论明确 | ArtifactAssessment 保存 artifact/ref 索引、deterministic result、Judge result、final assessment 与短 summary，不复制 payload | S5；一个 Artifact 可针对不同 Requirement 有不同 Assessment |
-| D060 | 讨论明确 | Deterministic Validation 提供事实基线：Hard failure 不可被 Judge 覆盖；时间覆盖、freshness、样本等 soft signals 可由 Judge 根据 Requirement 相当程度调整最终 assessment | S5；兼顾程序约束与语义上下文 |
-| D061 | 讨论明确 | Planner 根据 RequirementState、Artifact、recoverability、round、budget 与 source availability 自己决定 PLAN / REPLAN / STOP_PLANNING | S5；修订 D042 的 replan ownership |
-| D062 | 讨论明确 | Requirement Decomposer 产生的 Initial Requirements 是不可修改业务基线；Planner 可新增 supporting Requirement，但不能改写原需求或提高原 Objective 完成门槛 | S5；区分 INITIAL / PLANNER_ADDED |
-| D063 | 讨论明确 | RequirementState 主要反馈给 Planner；ObjectiveState 主要反馈给 Orchestrator，用于 Finalization 与结果生成调度 | S5；避免每个组件读取全部底层状态 |
-| D064 | 讨论明确 | Planner 默认可检阅 Artifact index 与 ArtifactAssessment summary，必要时通过 Shared Context Service 展开 Artifact | S5；避免只看状态又避免把全部 payload 塞进上下文 |
-| D065 | 讨论明确 | Planner 返回 planner_terminal 与 terminal_reason 时，Orchestrator 在无新外部条件下不得再次调用 Planner | S5；防止最大轮次/无数据时形成死循环 |
-| D066 | 讨论明确 | 宏观架构进入 Architecture Freeze；后续优先 Domain Modeling → ADR → Spec → Tickets → TDD / Implementation → Code Review | S5；除非 Domain Modeling 发现结构性矛盾，否则不再横向加大模块 |
-| P001 | 编辑建议 | 为 plan / execution 增加版本或快照机制 | 便于 checkpoint 与审计，具体实现待定 |
-| P002 | 编辑建议 | 设置 MAX_RETRIES、MAX_REPLANS、MAX_TOTAL_STEPS | 避免无限循环，同时与 D061/D065 协同 |
-| P003 | 编辑建议 | Requirement Matcher 返回 SATISFIED / PARTIAL / UNSATISFIED 或等价状态 | 支持 Artifact 复用、组合满足与部分覆盖 |
-| P004 | 编辑建议 | Evidence 保留 raw source 与 structured extraction 两层 | 支持引用、debug 与幻觉检查 |
-| P005 | 编辑建议 | Sub-agent Report 使用共享 envelope，专业结果通过 result_ref 指向 RoutingDecision / JudgeAssessment / ExecutionPlan 等 | 支持 Orchestrator 统一审阅 |
-| O001 | 待决 | Core Domain Contract 正式 schema | AnalysisObjective/ObjectiveState、Requirement/RequirementState、Task/TaskExecution、Artifact/Assessment 等 |
-| O002 | 待决 | StateTransition、AgentReport、PlanningDecision、Checkpoint、ContextPackage 正式契约 | ownership、version、transition reason、并发与审阅 |
-| O003 | 待决 | Requirement / Objective 状态更新与 sufficiency 的具体算法 | Critical gate、partial/unsatisfied、LIMITED/FAILED 边界 |
-| O004 | 待决 | Planner / Router 与 Registry / Context Service 的正式接口 | 输入上下文、查询接口、模型/规则边界 |
-| O005 | 待决 | Persistence 的正式表结构、版本机制、retention / compaction policy | Operational PostgreSQL、Object Storage、event/checkpoint 生命周期 |
-| O006 | 待决 | Context retrieval / projection policy 的正式 contract | 结构化 filter、semantic retrieval、freshness、跨 Run CompletionReport 使用 |
-| O007 | 待决 | QualificationRule / SampleAdequacyRule / LeagueStateSnapshot 正式契约 | 动态 threshold、sample unit、coverage、source freshness |
-| O008 | 待决 | Permission / Cost policy 的正式等级与 Orchestrator escalation contract | 免费、付费、高成本、system-admin-only |
-| O009 | 待决 | LangGraph 引入时机 | 先完成 Domain Modeling 与可测试状态机，再评估迁移价值 |
+| D001 | 讨论明确 | 保留原问题 raw_query 和已确认约束 | S1/S5；实现已由 S6 核验 |
+| D002 | 已实现 | 允许模型写 SQL，并由程序校验 | S1/S6；SQL AST/read-only guard 已实现并做 adversarial tests |
+| D003 | 历史方案 | 热库、冷库、联网与姓名反查四工具 | S2；现 Runtime 已改为 capability/router/source-mapping 架构 |
+| D004 | 已实现 | 实体歧义可向用户澄清，内部关联依赖 canonical ID | S5/S6；Clarification lifecycle 已持久化 |
+| D005 | 已实现 | 任务参数与结果采用标准类型 | S5/S6；Domain contracts 已落地 |
+| D006 | 已实现 | Plan 与 Execution 分离：AgentTask 不直接承载运行状态 | S5/S6 |
+| D007 | 已实现 | 保存每一次 TaskAttempt 历史，用于 retry、debug、evaluation 与恢复 | S5/S6；正常 LLM context 不直接包含完整历史 |
+| D008 | 已实现 | 技术性错误由 Executor 重试，语义性失败进入评估与 Planning Loop | S5/S6 |
+| D009 | 已实现 | 0 rows 与 tool failure 分离 | S5/S6；NO_DATA 与 TECHNICAL_FAILURE 分开 |
+| D010 | 已实现 | 数据及 ToolResult 记录来源 | S5/S6；Artifact/Evidence 保留 provenance |
+| D011 | 已实现 | retryable 属于 Tool 层，recoverable 属于 Agent 层 | S5/S6 |
+| D012 | 已实现 | 任务的数据依赖优先用结构化 ArtifactRequirement 表达 | S5/S6 |
+| D013 | 用户约束 | 避免过细 artifact_id / 自由字符串命名体系 | S1/S5；继续作为维护约束 |
+| D014 | 已实现 | ArtifactRequirement 的过滤条件复用 typed Constraint，而非自由 dict | S5/S6 |
+| D015 | 已实现 | Planner 保持在 semantic level，physical schema 映射由 Registry / Schema 层处理 | S5/S6 |
+| D016 | 已实现 | Web Router 只决定去哪里找；RawWebResult 由 Evidence Extractor 转结构化 Evidence | S5/S6 |
+| D017 | 已实现 | AgentState 与 LLM Context View 分离 | S5/S6；Context projection 已有隔离测试 |
+| D018 | 已实现 | collected data 不自动等于 approved data，应经过 validation / quality gate | S5/S6 |
+| D019 | 已实现方向 | confidence 更接近 analysis sufficiency，不是模型正确概率 | S5/S6；仍保持离散/可解释结果 |
+| D020 | 已实现 | Metric 层保持简单，核心为 MetricDefinition + SourceMapping | S5/S6 |
+| D021 | 已实现 | SourceMapping 采用 DIRECT / CALCULATED / 无映射语义 | S5/S6；已进入 runtime routing |
+| D022 | 已实现并修订表述 | Metric Registry 负责 execution correctness；Shared Knowledge/Retrieval 负责语义知识 | S5/S6；RAG/pgvector 尚未启用，不能把 Shared Knowledge 等同 RAG |
+| D023 | 已实现 | Semantic Understanding Layer 负责拆 AnalysisObjective；Planner 不重复解释用户意图 | S5/S6 |
+| D024 | 已实现 | Objective type 使用受控主类 + 开放 subtype/description | S5/S6 |
+| D025 | 已实现方向 | Objective type 可提供 base priority，Planner 调整 execution priority | S5/S6 |
+| D026 | 已实现 | Semantic Layer 可补充隐含 Constraint，但必须标记为系统推断 | S5/S6 |
+| D027 | 已实现 | 独立 Judge / Critic 评审 collected data，但不接管 Planner | S5/S6 |
+| D028 | 已实现 | Judge 使用 STRONG / ACCEPTABLE / WEAK / REJECT 等离散等级 | S5/S6 |
+| D029 | 已实现方向 | sufficiency 分 Artifact 与 Objective 两级；最终循环按 Objective 计算 | S5/S6 |
+| D030 | 已实现方向 | 已完成 Objective 可冻结和复用，未完成部分继续处理；Query 允许 partial/limited 结果 | S5/S6 |
+| D031 | 已实现 | 总体架构分 Main Agent Flow、Shared Knowledge Services、Runtime & Governance | S5/S6 |
+| D032 | 已实现 | Validation / Policy 是 cross-cutting governance | S5/S6 |
+| D033 | 已实现 | 主流程为 Interaction、Normalization、Planning & Orchestration、Data & Tool、Evaluation & Sufficiency、Response 六层 | S5/S6 |
+| D034 | 已实现 | Requirement Decomposer 在 Planner 前产生 semantic-atomic ArtifactRequirement | S5/S6 |
+| D035 | 已实现 | Requirement 的 base_criticality 是稳定语义重要性 | S5/S6 |
+| D036 | 已实现 | ArtifactRequirement 与 Artifact 共用统一 ArtifactDescriptor / semantic keys | S5/S6 |
+| D037 | 已实现 | Feature Engine 的确定性结果进入统一 Artifact 体系并保留 lineage | S5/S6 |
+| D038 | 已实现 | QualificationRule 与 SampleAdequacyRule 分离 | S5/S6 |
+| D039 | 已实现方向 | official league progress 与 local ingestion coverage 分开 | S5/S6；live League State 仍可继续增强 |
+| D040 | 已实现 | Planner 给 source preference；Router 负责实际 source/tool selection | S5/S6 |
+| D041 | 已实现 | Orchestrator 是工作流管理者，不是领域专家 | S5/S6 |
+| D042 | 已由 D061 修订 | 早期为 Orchestrator 决定 when to replan；现由 Planner 返回 PLAN / REPLAN / STOP_PLANNING | S5；保留演变历史 |
+| D043 | 已实现 | Runtime State 拆成多个独立 State Domain，而不是 giant AgentState | S5/S6 |
+| D044 | 已实现方向 | Local ownership + reviewed global transition | S5/S6 |
+| D045 | 已实现 | Meaning ambiguity 必须 clarification，并提供少量选项 | S5/S6；支持 WAITING_FOR_USER checkpoint/resume |
+| D046 | 已实现 | 免费允许的 source fallback 可自主进行；付费 / 高成本 source 需要用户授权 | S5/S6；Permission 已 scoped/expiring/single-use |
+| D047 | 已实现并加固 | PostgreSQL、DuckDB / Parquet 是只读资源；用户不能对话授权写入 | S5/S6；SQL/DuckDB guard 已做 bypass hardening |
+| D048 | 已实现 | Artifact quality 是绑定 Objective / Requirement 的 contextual ArtifactAssessment | S5/S6 |
+| D049 | 已实现方向 | Objective Sufficiency 先做 Critical Requirement gate，再做 coverage | S5/S6；避免 optional 证据平均掉核心缺口 |
+| D050 | 已实现 | Objective COMPLETE 可以保留 optional_gaps / limitations | S5/S6 |
+| D051 | 已实现并审计 | Response Agent 只消费最终 accepted outputs | S5/S6；曾修复 cross-objective accepted-evidence leakage |
+| D052 | 已实现 | Finalization 保留最终 Artifact、Evidence、provenance 与关键 Shared Knowledge | S5/S6 |
+| D053 | 已实现 | CompletionReport 是内部 finalization record；ResponsePackage 是回答投影 | S5/S6 |
+| D054 | 已实现 | Checkpoint 是一致恢复坐标，不复制全部 Artifact / attempts | S5/S6 |
+| D055 | 部分 live 验证 | Agent Runtime 使用独立 Control Plane；已有 SQLite dev + PostgreSQL implementation | S5/S6；Operational PostgreSQL production path 尚待完整 live 验证 |
+| D056 | 已实现方向 | 大型 Artifact payload 放 Local/Object Storage；Redis 非 v0.1 必需 | S5/S6 |
+| D057 | 已实现 | Retrieval 不设独立业务 Sub-agent，而是 Shared Knowledge & Context 的内部能力 | S5/S6 |
+| D058 | 已实现 | ObjectiveState 与 RequirementState 从 Definition 创建时即存在 | S5/S6 |
+| D059 | 已实现 | ArtifactAssessment 保存 refs、deterministic/Judge/final result 与 summary，不复制 payload | S5/S6 |
+| D060 | 已实现并加固 | Hard deterministic failure 不可被 Judge 覆盖；soft signals 可上下文解释 | S5/S6 |
+| D061 | 已实现 | Planner 根据 RequirementState、Artifact、recoverability、round、budget、sources 决定 PLAN / REPLAN / STOP | S5/S6 |
+| D062 | 已实现并审计 | Initial Requirements 不可修改；Planner 可加 supporting Requirement，但不能改 Completion semantics | S5/S6 |
+| D063 | 已实现 | RequirementState 主要反馈 Planner；ObjectiveState 主要反馈 Orchestrator | S5/S6 |
+| D064 | 已实现 | Planner 默认看 Artifact index + Assessment summary，并通过 ContextService 按需展开 | S5/S6 |
+| D065 | 已实现并测试 | planner_terminal 在无外部变化时阻止 Orchestrator 重复调用 Planner | S5/S6 |
+| D066 | 阶段完成 | 宏观架构 Architecture Freeze；后续 Domain Modeling → ADR → Spec → TDD / Implementation → Review | S5；该流程已实际进入 implementation/integration |
+| D067 | 已实现 | Shared Knowledge 使用持久化 Knowledge Store，不是硬编码 prompt，也不是 Retrieval Agent | S6；dev `.runtime/knowledge.db`，production 方向为 PostgreSQL `knowledge` schema |
+| D068 | 已实现 | `Collected Knowledge != Active Knowledge`；知识 refresh 采用 fetch → validate → stage → activate / supersede | S6；用于 rules/community/source freshness |
+| D069 | 已确认并实现 | Shared Knowledge 的 truth source 是结构化 KnowledgeItem + provenance；RAG/embedding 只是未来可重建检索索引 | S6；pgvector 继续 deferred |
+| D070 | 已实现 | EntityDictionary 与 MetricRegistry 可由 Shared Knowledge projection，减少双份 canonical truth | S6；Astra integration 已接入默认 composition |
+| D071 | 已实现 | SyntheticDataTool 只允许显式 `--demo`，默认 Runtime 不得用 fake analytics 冒充真实 Evidence | S6；默认 pipeline integration tests 已覆盖 |
+| D072 | 已实现 | Permission 必须 scoped、auditable、可过期且不可覆盖 SYSTEM_POLICY | S6；一个 paid tool 的批准不能授权其他 tool |
+| D073 | 已实现 | USER_CONSTRAINT 的放宽通过 ConstraintRevisionRequest + WAITING_FOR_USER；接受后标为 USER_CONFIRMED | S6；SYSTEM_POLICY 不可协商 |
+| D074 | 已实现 | Tool capability 不只按 artifact_type，还可按 `supported_data_keys` 限制，避免通用 Evidence source 抢走不支持的动态 Requirement | S6；Astra integration hardening |
+| D075 | 已确认 | 当前产品整合线为 `astra/v0.1-integration`，由 hardened runtime 与 Shared Knowledge 真实 Git merge 合成 | S6；后续 final review 在此基础上继续 |
+| D076 | 待 release 确认 | 安全实现 history 与旧 main 无普通共同 ancestry；最终发布倾向 reviewed v0.1 snapshot / explicit release integration，而非草率 fast-forward | S6；最终发布前再审计一次 Git ancestry 与 secret safety |
+| P001 | 部分实现 | 为 plan / execution 增加版本或快照机制 | Checkpoint/state version refs 已存在；并发/version策略仍可继续加固 |
+| P002 | 已实现方向 | 设置 retry / replan / total-step 上限 | Runtime 有 max_rounds / budget / terminal latch；具体生产参数仍可调 |
+| P003 | 已实现方向 | RequirementState 表达 satisfied / partial / unsatisfied 类语义 | S6；实际 enum/状态以代码为准 |
+| P004 | 已实现 | Evidence 保留 RawWebResult 与 structured Evidence 两层 | S6 |
+| P005 | 已实现 | Sub-agent Report 使用共享 envelope，专业结果通过 result refs 表达 | S6；AgentReport 已落地 |
+| O001 | 已解决 | Core Domain Contract 正式 schema | 已在 `app/models` 等落地并被测试覆盖 |
+| O002 | 已解决/持续加固 | StateTransition、AgentReport、PlanningDecision、Checkpoint、ContextPackage 契约 | 已实现；并发/version semantics 仍可继续审计 |
+| O003 | 已解决到 v0.1 | Requirement / Objective 状态更新与 sufficiency 算法 | deterministic services 已实现；未来可基于真实场景调整权重策略 |
+| O004 | 已解决 | Planner / Router 与 Registry / Context Service 的正式接口 | 已进入 Runtime，SourceMapping 与 Context projection 已有 integration tests |
+| O005 | 部分解决 | Persistence 表结构、版本、retention / compaction | SQLite/PostgreSQL OperationalStore 与 checkpoint 已实现；production retention/compaction 仍 deferred |
+| O006 | 已解决到 v0.1 | Context retrieval / projection contract | 已有 ContextRequest/ContextPackage、run/objective isolation 与 bounded knowledge projection；semantic vector retrieval deferred |
+| O007 | 已解决到 v0.1 | QualificationRule / SampleAdequacyRule / LeagueStateSnapshot 契约 | 已有实现；live league/context coverage 可继续增强 |
+| O008 | 已解决到 v0.1 | Permission / Cost policy 与 Orchestrator escalation contract | scoped Permission + expiry + ConstraintRevision lifecycle 已实现 |
+| O009 | Deferred | LangGraph 引入时机 | 当前自研可测试状态机已成形；无真实必要前不引入 |
+| O010 | 待验证 | 真实 `baseball_analytics` PostgreSQL read-only E2E | 最近 probe 不可用；不能把 contract tests 当 live validation |
+| O011 | 待验证 | 2015–2023 Parquet schema 与 SchemaRegistry / Feature Engine 的完整对齐 | bounded read 已成功，但复杂 high-zone query 暴露历史字段缺口 |
+| O012 | 待验证 | WebEvidenceTool 的真实 provider E2E | MLB Stats API transport 曾成功，但网络 timeout 使完整链路仍为 partial |
+| O013 | 待 release | v0.1 如何安全进入 main | 需处理 unrelated safe history，并在 final review 后选择 release integration 方式 |
 
-变更时保留旧决策并标记被哪个新决策替代。不要悄悄把讨论方案或编辑建议写成“当前已实现”。
+变更时保留旧决策并标记被哪个新决策替代。不要把 fake-tested、contract-tested 或 partial live probe 写成 production verified。
