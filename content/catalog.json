@@ -115,6 +115,17 @@
       "updated": "2026-09-15",
       "source_ids": ["S5", "S6"],
       "file": "posts/10-from-architecture-to-v01-integration.md"
+    },
+    {
+      "id": "BA-011",
+      "slug": "11-from-v01-to-artifact-driven-runtime",
+      "title": "从 v0.1 的安全可执行到 Artifact-Driven Runtime：为什么 Baseball Agent 再次重构",
+      "description": "记录 v0.1 发布、真实 dogfooding、LLM-first v0.2、generalization audit，以及 Goal/Need/Artifact/Reference、Safe Analytical IR、跨 Tool 组合与 Shared Knowledge Governance 的新方向。",
+      "category": "架构演进",
+      "published": "2026-09-17",
+      "updated": "2026-09-17",
+      "source_ids": ["S7", "S8"],
+      "file": "posts/11-from-v01-to-artifact-driven-runtime.md"
     }
   ]
 }

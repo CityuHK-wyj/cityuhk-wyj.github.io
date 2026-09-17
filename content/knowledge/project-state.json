@@ -1,231 +1,300 @@
 {
   "project": "baseball_agent",
-  "as_of": "2026-09-15",
-  "coverage": "direct_github_repository_audit_plus_current_architecture_discussion",
+  "as_of": "2026-09-17",
+  "coverage": "current_discussion_plus_direct_github_verification_of_release_and_v0_2_branch",
   "current_repository_verified": true,
-  "architecture_status": "frozen_and_implemented_v0_1_integration",
-  "current_product_branch": "astra/v0.1-integration",
-  "current_product_head_observed": "2808f1263885bcba966078a58fac3f145ca28803",
-  "release_status": "v0_1_integration_candidate_not_yet_main",
-  "implementation_evidence": [
-    {
-      "feature": "safe_domain_foundation",
-      "status": "implemented_and_repository_verified",
-      "branch": "codex/architecture-implementation",
-      "source": "S6"
-    },
-    {
-      "feature": "core_agent_runtime",
-      "status": "implemented_and_repository_verified",
-      "branch": "agent/deepseek-implementation-safe",
-      "source": "S6"
-    },
-    {
-      "feature": "runtime_adversarial_hardening",
-      "status": "implemented_and_repository_verified",
-      "branch": "gpt56/runtime-audit-hardening",
-      "source": "S6"
-    },
-    {
-      "feature": "shared_knowledge_v1",
-      "status": "implemented_and_repository_verified",
-      "branch": "agent/shared-knowledge",
-      "source": "S6"
-    },
-    {
-      "feature": "runtime_plus_shared_knowledge_integration",
-      "status": "implemented_and_repository_verified",
-      "branch": "astra/v0.1-integration",
-      "source": "S6"
-    },
-    {
-      "feature": "real_parquet_read_probe",
-      "status": "partially_live_verified",
-      "source": "S6"
-    },
-    {
-      "feature": "mlb_stats_api_reference_probe",
-      "status": "partially_live_verified_network_unstable",
-      "source": "S6"
-    },
-    {
-      "feature": "baseball_analytics_postgresql_e2e",
-      "status": "unverified_live_recent_probe_unavailable",
-      "source": "S6"
-    }
-  ],
-  "architecture_baseline": {
-    "main_layers": [
-      "interaction",
-      "normalization",
-      "planning_and_orchestration",
-      "data_and_tools",
-      "evaluation_and_sufficiency",
-      "response"
+  "architecture_status": "v0_1_released_v0_2_llm_first_unmerged_artifact_runtime_redesign_confirmed",
+  "released_main": {
+    "branch": "main",
+    "sha": "35b47c4174e98460ebdbcd2ace46adfba36225c4",
+    "commit_message": "Adopt Baseball Agent v0.1 dual semantic runtime",
+    "tag": "v0.1.0",
+    "source": "S8"
+  },
+  "current_development_branch_verified": {
+    "branch": "pi/v0.2-llm-first-runtime",
+    "sha": "7c3b6bdd426147e5cc7780900678bede7def913c",
+    "merged_to_main": false,
+    "source": "S8"
+  },
+  "independent_review_report": {
+    "status": "GENERALIZATION_AUDIT_BLOCKED",
+    "source": "S7",
+    "remote_branch_verified": false,
+    "note": "The review report was supplied in the current discussion; the named audit branch was not observed remotely during this blog update."
+  },
+  "next_architecture": {
+    "name": "Artifact-Driven General Analytical Runtime",
+    "status": "confirmed_direction_implementation_pending",
+    "suggested_branch": "pi/v0.3-artifact-runtime",
+    "remote_branch_observed": false,
+    "source": "S7",
+    "principle": "flexible_cognition_composable_evidence_deterministic_actions",
+    "runtime_center": [
+      "goal",
+      "need_graph",
+      "artifact",
+      "reference",
+      "action_request"
+    ]
+  },
+  "v0_1_baseline": {
+    "status": "released",
+    "capabilities": [
+      "dual_semantic_runtime",
+      "real_postgresql_and_parquet_routing",
+      "read_only_postgresql",
+      "duckdb_filesystem_sandbox",
+      "sql_ast_guard",
+      "artifact_assessment_and_persistence",
+      "checkpoint_resume",
+      "context_isolation",
+      "shared_knowledge_v1",
+      "clarification_permission_constraint_revision",
+      "demo_only_synthetic_data"
+    ]
+  },
+  "v0_2_llm_first": {
+    "status": "implemented_remote_checkpoint_not_merged",
+    "verified_from_commit": [
+      "conversation_service",
+      "llm_understanding_planning_composing",
+      "semantic_parse_not_terminal_gate",
+      "live_web_research_seam",
+      "batting_and_pitching_tools",
+      "entity_lookup",
+      "strict_sql_analysis_request_boundary",
+      "candidate_knowledge_governance_seam",
+      "interactive_chat_cli"
     ],
-    "shared_knowledge_context": [
-      "persistent_knowledge_store",
-      "knowledge_source_registry",
-      "metric_registry",
-      "schema_registry",
-      "source_mapping",
-      "entity_dictionary",
-      "league_reference_context",
-      "context_management",
-      "retrieval_filter_rank_freshness_projection_delivery"
-    ],
-    "runtime_state_domains": [
-      "query_state",
-      "objective_state",
-      "requirement_state",
-      "planning_state",
-      "routing_state",
-      "execution_state",
-      "artifact_state",
-      "assessment_state",
-      "interaction_state",
-      "permission_state",
-      "budget_state",
-      "checkpoints"
-    ],
-    "governance": [
-      "validation_policy",
-      "read_only_database_policy",
-      "permission_escalation_policy",
-      "constraint_revision_policy",
-      "logging_observability",
-      "retry_budget_control",
-      "checkpoint_persistence",
-      "secret_redaction"
-    ],
-    "persistence": {
-      "control_plane": "operational_store_protocol_with_sqlite_dev_and_postgresql_implementation",
-      "knowledge_plane": "sqlite_dev_or_postgresql_knowledge_schema",
-      "large_payloads": "local_or_object_storage",
-      "data_plane": "baseball_analytics_postgresql_and_parquet_duckdb_read_only",
-      "redis": "not_required_for_v0_1",
-      "checkpoint_model": "consistent_state_coordinate_not_giant_state_dump"
+    "generalization_audit_findings_from_S7": {
+      "p1": [
+        "unrelated_evidence_can_complete_goal",
+        "date_range_questions_can_use_season_stats",
+        "city_based_team_filter_can_mix_teams",
+        "unsupported_explicit_constraints_can_be_dropped_or_defaulted"
+      ],
+      "p2": [
+        "phrase_specific_deterministic_fallback",
+        "weak_claim_grounding_for_web_snippets",
+        "narrow_predefined_metric_analytics",
+        "provider_fallback_can_change_intent",
+        "weak_reusable_followup_semantic_state"
+      ],
+      "p3": [
+        "known_dogfooding_examples_contaminate_tests_and_some_assertions_are_weak"
+      ]
     }
   },
-  "implemented_capabilities": [
-    "semantic_normalization",
-    "canonical_entity_resolution",
-    "clarification_wait_checkpoint_resume",
-    "analysis_objective_and_objective_state",
-    "requirement_decomposer",
-    "immutable_initial_requirements",
-    "planner_added_supporting_requirements",
-    "planner_plan_replan_stop",
-    "planner_terminal_latch",
-    "source_mapping_runtime_resolution",
-    "router_capability_and_data_key_constraints",
-    "read_only_postgresql_executor",
-    "read_only_duckdb_executor",
-    "feature_engine_artifact_lineage",
-    "raw_web_result_to_evidence_pipeline",
-    "deterministic_validation_and_judge",
-    "artifact_assessment",
-    "requirement_and_objective_state_services",
-    "completion_report_and_response_package",
-    "cross_run_and_cross_objective_context_isolation",
-    "operational_persistence",
-    "artifact_storage",
-    "checkpoint_and_resume",
-    "scoped_permission_wait_resume",
-    "permission_expiry_and_replay_protection",
-    "constraint_revision_wait_resume",
-    "run_metrics_emission_and_persistence",
-    "provider_neutral_llm_protocols",
-    "default_composition_root",
-    "explicit_demo_only_synthetic_data",
-    "persistent_shared_knowledge_v1",
-    "knowledge_authority_freshness_effective_dates",
-    "knowledge_context_source",
-    "knowledge_backed_entity_dictionary",
-    "knowledge_backed_metric_registry",
-    "cli_ask_answer_resume_inspect_knowledge"
-  ],
-  "shared_knowledge_v1": {
-    "physical_dev_store": ".runtime/knowledge.db",
-    "production_direction": "postgresql_knowledge_schema",
-    "rebuildable_sources": [
-      "knowledge/sources/*.json",
-      "knowledge/seed/*.json"
+  "artifact_runtime_direction": {
+    "information_transfer": {
+      "pattern": "fixed_envelope_flexible_payload_explicit_references",
+      "reference_targets": [
+        "user_message",
+        "query_span",
+        "conversation_message",
+        "artifact",
+        "artifact_field_or_row",
+        "web_evidence_span",
+        "knowledge_item",
+        "sql_result",
+        "derived_computation",
+        "clarification_answer"
+      ]
+    },
+    "planner": {
+      "role": "artifact_dataflow_planner",
+      "loop": [
+        "understand_goal",
+        "identify_missing_need",
+        "select_capability",
+        "produce_or_consume_artifact",
+        "assess_scope_and_evidence",
+        "replan_until_sufficient_or_terminal"
+      ]
+    },
+    "tool_composition": [
+      "web_to_sql",
+      "sql_to_web",
+      "knowledge_to_sql",
+      "sql_to_compute_to_web",
+      "web_to_entity_to_sql",
+      "db_anomaly_to_web_to_db_reanalysis"
     ],
-    "covered_domains": [
-      "official_baseball_rules_2026",
-      "transaction_and_roster_rules",
-      "baseball_glossary",
-      "sabermetrics_and_statcast_metrics",
-      "pitch_and_plate_discipline_terms",
-      "qualification_and_scouting_concepts",
-      "all_current_mlb_teams",
-      "ballparks_and_divisions",
-      "bilingual_aliases",
-      "notable_players",
-      "awards",
-      "historical_eras",
-      "trusted_sources",
-      "community_creators"
+    "artifact": {
+      "planned_fields": [
+        "artifact_id",
+        "kind",
+        "structured_data",
+        "text_content",
+        "exports",
+        "provenance",
+        "references",
+        "actual_scope",
+        "lineage",
+        "metadata"
+      ]
+    },
+    "scope_and_sufficiency": {
+      "distinguish": ["requested_scope", "actual_scope"],
+      "coverage_dimensions": [
+        "entity",
+        "time",
+        "population",
+        "measure",
+        "evidence_quality"
+      ],
+      "complete_rule": "core_goal_supported_by_relevant_accepted_evidence"
+    }
+  },
+  "analytical_runtime_direction": {
+    "metric_registry_role": "canonical_reusable_metric_definitions_not_analysis_whitelist",
+    "supports_ad_hoc_derived_analysis": true,
+    "schema_catalog": {
+      "trusted": true,
+      "planned_metadata": [
+        "relation",
+        "field",
+        "type",
+        "grain",
+        "meaning",
+        "nullability",
+        "entity_relationship",
+        "source_coverage",
+        "allowed_operations"
+      ]
+    },
+    "safe_analytical_ir": {
+      "status": "design_confirmed_implementation_pending",
+      "operations": [
+        "filter",
+        "entity_set_filter",
+        "date_filter",
+        "group_by",
+        "count",
+        "count_non_null",
+        "count_if",
+        "avg",
+        "sum",
+        "min",
+        "max",
+        "derived_expression",
+        "sort",
+        "limit",
+        "period_comparison",
+        "explicitly_modeled_safe_lookup_or_join"
+      ],
+      "arbitrary_sql": false,
+      "arbitrary_python_eval": false
+    },
+    "execution_path": [
+      "analysis_need",
+      "safe_analytical_ir",
+      "schema_catalog_validation",
+      "deterministic_sql_compiler",
+      "sql_guard",
+      "read_only_execution"
+    ]
+  },
+  "shared_knowledge_direction": {
+    "read_path": "active_approved_knowledge_to_knowledge_artifact",
+    "write_path": "runtime_discovery_to_candidate_to_admin_review_to_active",
+    "runtime_agent_can_promote_active": false,
+    "knowledge_layers": [
+      "runtime_evidence",
+      "candidate_knowledge",
+      "approved_active_knowledge"
     ],
-    "rag_pgvector": "deferred_until_semantic_retrieval_need_is_demonstrated"
+    "planned_types": [
+      "canonical_fact",
+      "entity_alias",
+      "definition",
+      "historical_event",
+      "rule",
+      "community_reference",
+      "community_opinion",
+      "scouting_note",
+      "tactical_concept"
+    ],
+    "planned_scope": [
+      "domain",
+      "language",
+      "locale_or_community",
+      "effective_dates",
+      "authority",
+      "source_refs",
+      "verification_state",
+      "confidence"
+    ],
+    "rag_pgvector": "deferred"
+  },
+  "testing_strategy": {
+    "known_regression": "builder_visible",
+    "independent_holdout": "generated_after_implementation_by_independent_reviewer",
+    "real_dogfooding": "natural_user_queries",
+    "anti_shortcut_focus": [
+      "substitution",
+      "paraphrase",
+      "unseen_entities",
+      "unseen_teams",
+      "unseen_years",
+      "derived_calculations",
+      "cross_tool_workflows",
+      "scope_mismatch",
+      "irrelevant_evidence"
+    ]
   },
   "confirmed_directions": [
-    "preserve_raw_query_and_confirmed_constraints",
-    "semantic_layer_decomposes_analysis_objectives",
-    "initial_requirements_are_immutable_business_baseline",
-    "planner_owns_plan_replan_stop_planning_decision",
-    "planner_terminal_prevents_reinvocation_without_external_change",
-    "router_uses_source_mapping_and_capability_constraints",
-    "orchestrator_is_manager_not_domain_expert",
-    "artifact_quality_is_contextual_assessment",
-    "hard_deterministic_failures_are_not_overridable",
-    "response_only_consumes_final_accepted_outputs",
-    "retrieval_is_shared_context_capability_not_business_subagent",
-    "persist_broadly_retrieve_narrowly",
-    "free_permitted_source_fallback_can_be_autonomous",
-    "paid_or_high_cost_sources_require_scoped_user_permission",
-    "system_policy_cannot_be_overridden_by_user_permission",
-    "user_constraint_revision_requires_explicit_confirmation",
-    "postgresql_duckdb_parquet_are_read_only_agent_resources",
-    "shared_knowledge_is_structured_truth_not_synonym_for_rag",
-    "collected_knowledge_is_not_automatically_active_knowledge",
+    "preserve_raw_query_and_explicit_user_constraints",
+    "semantic_understanding_is_helper_not_terminal_gate",
+    "fixed_envelope_with_flexible_payload",
+    "references_reduce_information_loss",
+    "planner_is_artifact_dataflow_planner",
+    "tool_outputs_can_feed_other_tools",
+    "unknown_is_recovery_and_routing_signal",
+    "requested_scope_must_not_silently_disappear",
+    "goal_coverage_drives_sufficiency",
+    "metric_registry_is_not_analysis_whitelist",
+    "ad_hoc_derived_analysis_uses_safe_ir",
+    "sql_execution_converges_through_trusted_schema_and_deterministic_compiler",
+    "llm_does_not_emit_trusted_executable_sql",
+    "shared_knowledge_requires_governed_promotion",
+    "runtime_evidence_is_not_automatically_permanent_knowledge",
+    "community_reference_is_not_global_alias",
+    "collected_data_is_not_automatically_accepted_evidence",
     "synthetic_analytics_requires_explicit_demo_mode",
-    "baseball_analytics_data_plane_separate_from_agent_control_and_knowledge_planes"
+    "independent_holdout_evaluation_prevents_example_overfitting"
   ],
   "remaining_work": [
-    "live_baseball_analytics_postgresql_read_only_e2e",
-    "historical_parquet_schema_alignment_with_schema_registry_and_feature_engine",
-    "complex_statcast_plus_salary_value_realistic_e2e",
-    "live_web_evidence_provider_e2e",
-    "operational_postgresql_live_verification",
-    "documentation_state_cleanup",
-    "final_architecture_security_integration_review",
-    "safe_release_integration_to_main",
-    "v0_1_tag"
+    "implement_goal_need_reference_artifact_models",
+    "implement_artifact_dataflow_planner_loop",
+    "implement_artifact_exports_and_cross_tool_consumption",
+    "implement_safe_analytical_ir_and_schema_catalog",
+    "enable_general_derived_calculations",
+    "rewrite_scope_aware_sufficiency",
+    "strengthen_web_claim_grounding",
+    "refactor_shared_knowledge_governance_and_scope",
+    "persist_conversation_semantic_state_and_artifact_refs",
+    "run_independent_holdout_generalization_audit_before_release"
   ],
-  "known_release_issue": {
-    "main_and_safe_integration_common_ancestor": false,
-    "reason": "safe implementation history was reconstructed to exclude credential-bearing ancestry",
-    "current_direction": "reviewed_v0_1_snapshot_or_explicit_release_integration_instead_of_naive_fast_forward"
-  },
   "next_phase": [
-    "real_data_verification",
-    "final_review",
-    "release_integration",
-    "v0_1_user_validation"
+    "artifact_runtime_implementation",
+    "stable_checkpoint",
+    "independent_generalization_audit",
+    "dogfooding",
+    "release_decision"
   ],
   "read_first": [
     "current-state.md",
     "decisions.md",
     "sources.md",
+    "../posts/11-from-v01-to-artifact-driven-runtime.md",
     "../posts/10-from-architecture-to-v01-integration.md",
-    "../posts/09-planning-artifacts-and-evidence.md",
-    "../posts/05-validation-and-feedback.md"
+    "../posts/09-planning-artifacts-and-evidence.md"
   ],
   "blog_repository": "https://github.com/CityuHK-wyj/cityuhk-wyj.github.io",
   "blog_url": "https://cityuhk-wyj.github.io/",
   "deployment_status_url": "https://github.com/CityuHK-wyj/cityuhk-wyj.github.io/actions",
   "blog_deployed": true,
-  "last_content_update": "2026-09-15"
+  "last_content_update": "2026-09-17"
 }
