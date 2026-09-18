@@ -8,7 +8,8 @@
 
 - 原始用户意图尽量无损保存；
 - Planner 可以自由决定下一步需要什么信息与能力；
-- Tool / Executor 在自己的 action boundary 才进入严格 typed contract；
+- Web / Knowledge / Dynamic Evidence 保持开放语义请求，只施加安全、来源与 provenance 约束；
+- 只有数据库分析在 SQL 边界把开放 analytical intent 收敛成 Safe IR / SQL；
 - PostgreSQL、Parquet、Web、Dynamic Facts、Shared Knowledge 与 sandboxed compute 通过 Artifact/Reference 组合；
 - 最终回答只来自可追溯、范围匹配的 accepted evidence；
 - 证据不完整时优先 LIMITED，而不是无条件全拒绝。
@@ -81,7 +82,7 @@ Planner / Runtime Binder / Executor responsibility boundary
 
 ## 当前冻结的核心架构原则
 
-> **Flexible cognition, explicit planning, deterministic execution.**
+> **Flexible cognition, explicit planning, SQL-specific convergence.**
 
 ### Early cognition
 
@@ -108,9 +109,20 @@ Planner 不直接拥有 physical schema、trusted SQL、Artifact ID 或 completi
 
 ### Execution
 
-每个 Tool 在自己的 boundary 内收敛。
+不是所有 Tool 都做相同的语义收敛。
 
-数据库：
+Web / Knowledge / Dynamic Evidence 保留开放 request，主要约束：
+
+~~~text
+security
+source policy
+provenance
+references
+budget
+evidence grounding
+~~~
+
+数据库才进行严格 analytical narrowing：
 
 ~~~text
 Analytical Need
@@ -139,7 +151,7 @@ explicit Artifact bindings
 → derived Artifact
 ~~~
 
-Web / Knowledge 同样通过 typed request 与 Artifact 返回。
+Web / Knowledge 可以使用稳定 envelope 与 Artifact 返回，但其 semantic payload 不需要像 SQL 一样进入封闭 DSL。
 
 ## User Requirement 与 Planner Need
 
@@ -212,6 +224,30 @@ Data Routing：
 Evidence Routing 根据 Requirement / evidence class / freshness / source authority 选择 Dynamic Fact、Web、Knowledge 或本地数据。
 
 历史问题仍可能需要 Web；当前问题也可能完全不需要 Web。
+
+## 数据库输出契约
+
+数据库输入必须严格编译；数据库输出只需要一定程度标准化。
+
+建议统一：
+
+~~~text
+columns/schema
+rows/structured_data
+row_count
+requested_scope
+actual_scope
+provenance
+IR/query ref
+lineage
+exports
+~~~
+
+具体查询结果的列、聚合与派生值可以保持灵活。
+
+原则：
+
+> **strict SQL input, standardized envelope, flexible analytical payload.**
 
 ## Dynamic Facts
 
@@ -311,7 +347,9 @@ Need Graph
     ↓
 Runtime Binder / Scheduler
     ↓
-Tool-specific Adapter / Compiler
+Capability Execution
+    ├── Web/Knowledge/Dynamic: flexible semantic request
+    └── DB: SchemaCatalog → Safe IR → SQL
     ↓
 ToolOutcome + Artifact
     ↓
@@ -352,7 +390,7 @@ Response
 
 第 12 篇进一步冻结了下一轮重写的责任边界：
 
-> **Semantic 负责保留“用户要什么”；Planner 负责决定“下一步需要什么能力”；Runtime 负责把依赖绑定到真实 Artifact；Executor 负责“如何安全执行”；Judge/State 负责判断“证据是否足够”。**
+> **Semantic 负责保留“用户要什么”；Planner 负责决定“下一步需要什么能力”；Runtime 负责把依赖绑定到真实 Artifact；Web 保持开放语义；数据库只在生成 SQL 前严格收敛；Judge/State 负责判断“证据是否足够”。**
 
 当前优先级不是继续扩大 Scope 或给 Planner 更多 SQL 字段，而是依据这一边界重写 Planner → Binder → Executor 数据流。
 
