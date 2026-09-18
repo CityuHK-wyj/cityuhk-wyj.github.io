@@ -100,7 +100,7 @@
 | D094 | 已确认测试策略 | Known regression、independent holdout/substitution/paraphrase、real dogfooding 三层分离；Builder 不提前看到主要泛化验收题 | S7；防 evaluation leakage / shortcut |
 | D095 | 已确认开发策略 | 下一大版本先产 `ARTIFACT_RUNTIME_IMPLEMENTED` checkpoint，再由独立 Codex generalization audit；不以旧 dogfooding examples 全绿作为 release 条件 | S7 |
 
-| D096 | 当前重写基线 | Early semantic representation 采用 lossless/open/reference-rich；严格结构化推迟到具体 action boundary | S9；修订早期 fixed Scope 作为语义 authority 的做法 |
+| D096 | 当前重写基线，由 D112 精确化 | Early semantic representation 采用 lossless/open/reference-rich；不在 cognition/planning 层提前封闭语义 | S9；数据库收敛边界由 D112 精确定义 |
 | D097 | 当前重写基线 | SemanticMessage 使用 fixed envelope + flexible payload + explicit references；structured hints 只是提示，不得替代完整 user intent | S9 |
 | D098 | 当前重写基线 | Scope 降级为 execution/evidence metadata，不要求在 Planner 前完整描述 analytical semantics | S9 |
 | D099 | 当前重写基线 | UserRequirement 与 PlannerNeed 分离；Planner-added Need 不得抬高用户原始 Goal 的 completion semantics | S9 |
@@ -116,6 +116,9 @@
 | D109 | 当前重写基线 | Domain population（如 POSTSEASON）不能被 calendar range 替代；TemporalResolver 只能辅助，不得改变业务集合语义 | S9 |
 | D110 | 已确认继续保留 | Developer mode 与 normal chat 使用同一 Runtime；trace 展示 proposal/binding/tool/artifact/state delta，不暴露 chain-of-thought | S9 |
 | D111 | 当前开发策略 | 下一阶段采用大范围 Planner→Binder→Executor responsibility rewrite，而不是继续扩大 Scope schema 或 query-specific patch | S9 |
+| D112 | 当前重写基线 | Semantic narrowing 专指数据库 analytical intent → SchemaCatalog → Safe IR → SQL；Web/Knowledge/Dynamic Evidence 不采用 SQL 式封闭语义收敛，只保留安全、来源、provenance、reference 与 budget 边界 | S9；精确化 D079/D096 |
+| D113 | 当前重写基线 | Web research request 保持开放 semantic payload（objective/query/hints/refs/desired evidence），不得为了接口统一引入类似 Safe IR 的 Web DSL | S9 |
+| D114 | 当前重写基线 | Database output 使用 standardized envelope + flexible analytical payload；稳定 schema/columns/scope/provenance/lineage/exports，但允许查询特定列、聚合和派生值变化 | S9 |
 | P001 | 部分实现 | 为 plan / execution 增加版本或快照机制 | Checkpoint/state version refs 已存在；并发/version策略仍可继续加固 |
 | P002 | 已实现方向 | 设置 retry / replan / total-step 上限 | Runtime 有 max_rounds / budget / terminal latch；具体生产参数仍可调 |
 | P003 | 已实现方向 | RequirementState 表达 satisfied / partial / unsatisfied 类语义 | 实际 enum/状态以代码为准；后续将被 Goal/Need coverage 体系吸收/适配 |
