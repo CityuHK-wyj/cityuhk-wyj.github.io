@@ -99,6 +99,23 @@
 | D093 | 已确认新方向，待实现 | Conversation 持久化 reusable semantic state / Goal / entity refs / scope selections / clarification / Artifact refs，follow-up 不靠已知短语特殊处理 | S7 |
 | D094 | 已确认测试策略 | Known regression、independent holdout/substitution/paraphrase、real dogfooding 三层分离；Builder 不提前看到主要泛化验收题 | S7；防 evaluation leakage / shortcut |
 | D095 | 已确认开发策略 | 下一大版本先产 `ARTIFACT_RUNTIME_IMPLEMENTED` checkpoint，再由独立 Codex generalization audit；不以旧 dogfooding examples 全绿作为 release 条件 | S7 |
+
+| D096 | 当前重写基线 | Early semantic representation 采用 lossless/open/reference-rich；严格结构化推迟到具体 action boundary | S9；修订早期 fixed Scope 作为语义 authority 的做法 |
+| D097 | 当前重写基线 | SemanticMessage 使用 fixed envelope + flexible payload + explicit references；structured hints 只是提示，不得替代完整 user intent | S9 |
+| D098 | 当前重写基线 | Scope 降级为 execution/evidence metadata，不要求在 Planner 前完整描述 analytical semantics | S9 |
+| D099 | 当前重写基线 | UserRequirement 与 PlannerNeed 分离；Planner-added Need 不得抬高用户原始 Goal 的 completion semantics | S9 |
+| D100 | 当前重写基线 | Planner 只负责 objective / capability / dependency / desired output，不直接生成 physical table/field/trusted IR/SQL | S9；下一轮大改核心 |
+| D101 | 当前重写基线 | Need dependency 由 Runtime 解析为真实 Artifact Export + InputBinding；Planner 不得构造 pseudo Artifact refs | S9；来自 developer trace |
+| D102 | 当前重写基线 | Local Analytics 自己拥有 analytical compilation：Need → AnalyticalIntent → SchemaCatalog → Safe IR → deterministic SQL | S9 |
+| D103 | 已确认继续保留 | Data Routing 与 Evidence Routing 正交；年份决定统计存储，不决定是否需要 Web/Dynamic Fact | S9；延续 v0.8 方向 |
+| D104 | 已确认继续保留 | Dynamic Fact 使用 canonical entity + relation + as_of；LLM prior / UserAssertion 不自动成为 Evidence | S9 |
+| D105 | 已确认继续保留 | RequirementState/AnswerProjection 支持 partial sufficiency；不完整证据缩小回答范围，不自动抹掉已支持结论 | S9；延续 v0.9 |
+| D106 | 已确认继续保留 | Ephemeral Python 只消费显式 Artifact bindings，在 sandbox 内做 bounded post-processing，不绕过 DB/Web/security boundary | S9 |
+| D107 | 当前重写基线 | Replanner 默认 repair existing Need/Artifact graph 并复用 accepted Artifacts，不重新生成整套等价计划 | S9 |
+| D108 | 当前重写基线 | Planner 不得在 replanning 中随意改变 CORE/OPTIONAL；criticality 来自 UserRequirement 或 deterministic dependency semantics | S9 |
+| D109 | 当前重写基线 | Domain population（如 POSTSEASON）不能被 calendar range 替代；TemporalResolver 只能辅助，不得改变业务集合语义 | S9 |
+| D110 | 已确认继续保留 | Developer mode 与 normal chat 使用同一 Runtime；trace 展示 proposal/binding/tool/artifact/state delta，不暴露 chain-of-thought | S9 |
+| D111 | 当前开发策略 | 下一阶段采用大范围 Planner→Binder→Executor responsibility rewrite，而不是继续扩大 Scope schema 或 query-specific patch | S9 |
 | P001 | 部分实现 | 为 plan / execution 增加版本或快照机制 | Checkpoint/state version refs 已存在；并发/version策略仍可继续加固 |
 | P002 | 已实现方向 | 设置 retry / replan / total-step 上限 | Runtime 有 max_rounds / budget / terminal latch；具体生产参数仍可调 |
 | P003 | 已实现方向 | RequirementState 表达 satisfied / partial / unsatisfied 类语义 | 实际 enum/状态以代码为准；后续将被 Goal/Need coverage 体系吸收/适配 |
