@@ -14,7 +14,11 @@
       "category": "项目起点",
       "published": "2026-09-07",
       "updated": "2026-09-11",
-      "source_ids": ["S1", "S2", "S5"],
+      "source_ids": [
+        "S1",
+        "S2",
+        "S5"
+      ],
       "file": "posts/01-from-data-to-agent.md"
     },
     {
@@ -25,7 +29,10 @@
       "category": "数据工程",
       "published": "2026-09-07",
       "updated": "2026-09-07",
-      "source_ids": ["S1", "S2"],
+      "source_ids": [
+        "S1",
+        "S2"
+      ],
       "file": "posts/02-data-and-statistical-grain.md"
     },
     {
@@ -36,7 +43,9 @@
       "category": "语义理解",
       "published": "2026-09-07",
       "updated": "2026-09-07",
-      "source_ids": ["S1"],
+      "source_ids": [
+        "S1"
+      ],
       "file": "posts/03-entities-and-metrics.md"
     },
     {
@@ -47,7 +56,11 @@
       "category": "任务规划",
       "published": "2026-09-07",
       "updated": "2026-09-15",
-      "source_ids": ["S1", "S5", "S6"],
+      "source_ids": [
+        "S1",
+        "S5",
+        "S6"
+      ],
       "file": "posts/04-task-contracts.md"
     },
     {
@@ -58,7 +71,13 @@
       "category": "可靠性",
       "published": "2026-09-07",
       "updated": "2026-09-15",
-      "source_ids": ["S1", "S2", "S3", "S5", "S6"],
+      "source_ids": [
+        "S1",
+        "S2",
+        "S3",
+        "S5",
+        "S6"
+      ],
       "file": "posts/05-validation-and-feedback.md"
     },
     {
@@ -69,7 +88,11 @@
       "category": "案例拆解",
       "published": "2026-09-07",
       "updated": "2026-09-07",
-      "source_ids": ["S1", "S2", "S3"],
+      "source_ids": [
+        "S1",
+        "S2",
+        "S3"
+      ],
       "file": "posts/06-complex-query-walkthrough.md"
     },
     {
@@ -80,7 +103,10 @@
       "category": "开发实践",
       "published": "2026-09-07",
       "updated": "2026-09-07",
-      "source_ids": ["S1", "S3"],
+      "source_ids": [
+        "S1",
+        "S3"
+      ],
       "file": "posts/07-development-and-learning.md"
     },
     {
@@ -102,7 +128,10 @@
       "category": "任务规划",
       "published": "2026-09-10",
       "updated": "2026-09-15",
-      "source_ids": ["S5", "S6"],
+      "source_ids": [
+        "S5",
+        "S6"
+      ],
       "file": "posts/09-planning-artifacts-and-evidence.md"
     },
     {
@@ -113,7 +142,10 @@
       "category": "工程落地",
       "published": "2026-09-15",
       "updated": "2026-09-15",
-      "source_ids": ["S5", "S6"],
+      "source_ids": [
+        "S5",
+        "S6"
+      ],
       "file": "posts/10-from-architecture-to-v01-integration.md"
     },
     {
@@ -124,8 +156,24 @@
       "category": "架构演进",
       "published": "2026-09-17",
       "updated": "2026-09-17",
-      "source_ids": ["S7", "S8"],
+      "source_ids": [
+        "S7",
+        "S8"
+      ],
       "file": "posts/11-from-v01-to-artifact-driven-runtime.md"
+    },
+    {
+      "id": "BA-012",
+      "slug": "12-late-binding-planner-executor-rewrite",
+      "title": "重写前的架构收敛：Baseball Agent 为什么要把“理解、规划、执行”重新分开",
+      "description": "基于 v0.10 developer-mode dogfooding，冻结下一轮大范围重写的责任边界：Lossless Semantic、UserRequirement/PlannerNeed 分离、Planner→Runtime Binder→Tool Compiler、partial sufficiency 与可追溯执行。",
+      "category": "架构演进",
+      "published": "2026-09-18",
+      "updated": "2026-09-18",
+      "source_ids": [
+        "S9"
+      ],
+      "file": "posts/12-late-binding-planner-executor-rewrite.md"
     }
   ]
 }
