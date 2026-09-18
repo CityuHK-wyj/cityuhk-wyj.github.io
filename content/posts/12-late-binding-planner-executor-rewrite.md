@@ -56,7 +56,7 @@ v0.10 的 Lossless Intent Flow 已经修掉这一类前置语义损失。
 
 准备冻结的总原则是：
 
-> **Flexible cognition, explicit planning, deterministic execution.**
+> **Flexible cognition, explicit planning, SQL-specific convergence.**
 
 更具体地说：
 
@@ -67,15 +67,23 @@ Early cognition
 Planning
 = objective / capability / dependency / expected product
 
-Execution boundary
-= typed / narrow / validated / deterministic
+Web / Knowledge / Dynamic Evidence
+= keep semantic requests flexible
+= enforce security / provenance / source policy
+
+Database analytics
+= narrow only when compiling analytical intent into Safe IR / SQL
 ~~~
 
-也可以把它理解成：
+这里要特别区分两件事：
 
-> **严格约束 Action，不要严格约束 Thought。**
+> **安全边界不等于语义收敛。**
 
-前面的自然语言理解应该宁可保留更多信息，也不要为了填满 schema 而错误结构化；真正访问数据库、网络、文件、永久知识或执行代码时，再进入严格 boundary。
+Web 当然仍然需要 SSRF、source policy、provenance、evidence span 等安全与证据治理，但它不需要像数据库一样先把用户问题压进一个封闭 DSL。真正需要强语义收敛的是 SQL，因为 SQL 会直接访问结构化数据并执行精确计算。
+
+因此新的原则更准确地说是：
+
+> **开放语义尽量保持开放，只有进入数据库查询时才把分析意图收敛成受信任的 SQL 表达。**
 
 ## 3. 新的主链路
 
@@ -100,9 +108,17 @@ Capability Selection
     ↓
 Runtime Binding
     ↓
-Tool-specific Compiler / Adapter
-    ↓
-Tool Execution
+Capability Execution
+    ├── Web / Knowledge / Dynamic Fact
+    │     keep flexible semantic request + refs
+    │
+    └── Database Analytics
+          ↓
+        SQL Compilation Boundary
+          ↓
+        Safe Analytical IR
+          ↓
+        SQL
     ↓
 ToolOutcome
     ↓
@@ -185,7 +201,7 @@ Scope 仍然有价值，但它不再承担“完整描述一个棒球问题”�
 
 这些是 objective semantics，而不是 Scope。
 
-Scope 更应该在 Artifact / Tool execution / Verification 中逐步形成。
+Scope 更应该从真实 Evidence / Artifact 与数据库执行结果中逐步形成，而不是在所有 Tool 执行前强制完成。
 
 ## 6. User Requirement 与 Planner decomposition 必须分开
 
@@ -285,7 +301,7 @@ SQL operator
 
 更不应该自己猜 physical column 或 executable SQL。
 
-## 8. Local Analytics 自己拥有第二阶段 Analytical Compiler
+## 8. 只有数据库层需要真正的语义收敛
 
 当 Planner 选择 local analytics 后，才开始真正的数据库收敛：
 
@@ -309,11 +325,34 @@ SQL guard
 baseball_readonly
 ~~~
 
-这才是完整的 late binding。
+这里的“收敛”专指：
+
+~~~text
+开放分析语义
+→ 真实数据库字段 / relation / operator
+→ Safe IR
+→ SQL
+~~~
 
 LLM 可以参与 AnalyticalIntent → IR candidate，但可信字段、operation、relation、join 和 SQL 必须由 SchemaCatalog + deterministic validation 约束。
 
-这样 Planner 不需要知道 table / physical field / SQL AST，而 Executor 也不会因为 Planner 自由文本而获得无限执行权限。
+Web 不需要复制这套过程。Web Need 可以继续是开放语义：
+
+~~~text
+objective
+query / search intent
+entity/time hints
+references
+desired evidence
+~~~
+
+Web Tool 需要的是 SSRF、source allow/deny policy、fetch budget、provenance、evidence extraction 与 claim grounding，而不是一个类似 Safe IR 的“Web DSL”。
+
+Dynamic Fact / Shared Knowledge 也可以保留各自必要的 lookup key 或 relation hint，但不应该为了统一接口而被迫模拟 SQL 式收敛。
+
+因此：
+
+> **严格的 semantic narrowing 是 database-specific；其它 Tool 需要的是安全和证据契约，而不是统一的封闭语义 schema。**
 
 ## 9. Runtime Binding：Need dependency 不等于字符串引用
 
@@ -563,7 +602,36 @@ Python 只能消费显式 Artifact bindings，并继续禁止默认访问 host e
 
 如果一种操作重复出现，再提升成 deterministic operator 或 IR capability。
 
-## 17. Artifact / Assessment / State 继续分离
+## 17. 数据库输出可以标准化，但不需要变成僵硬结果类型
+
+数据库输入在 SQL 边界必须严格；数据库输出则可以采用“标准化 envelope + 灵活 payload”。
+
+推荐数据库 Artifact 至少稳定提供：
+
+~~~text
+artifact_id
+source / relation
+columns / schema
+rows or structured_data
+row_count
+measure / grouping hints
+requested_scope
+actual_scope
+provenance
+query / IR reference
+lineage
+exports
+~~~
+
+其中 envelope、schema、scope、provenance、lineage 应该标准化，便于 Judge、Planner 和下游 Python/Web 消费；具体查询返回哪些列、哪些聚合、哪些派生值则允许随分析变化。
+
+也就是说：
+
+> **Database input is strictly compiled; database output is structurally standardized but semantically extensible.**
+
+这样不会为了支持每一种临时分析就新增固定 Result 类型。
+
+## 18. Artifact / Assessment / State 继续分离
 
 这部分不是下一轮要推翻的东西。
 
@@ -582,7 +650,7 @@ Artifact 继续保存 structured_data、text、exports、provenance、references
 
 Judge/Verification 再判断这个 Artifact 是否能支持某个 Requirement。
 
-## 18. Shared Knowledge 继续采用 authority governance
+## 19. Shared Knowledge 继续采用 authority governance
 
 Stable identity、domain definition、rule、historical knowledge 与 dynamic operational state 继续分开。
 
@@ -606,7 +674,7 @@ Runtime discovery
 
 当前球队、roster、injury、transaction、current statistics 不能作为 timeless player profile 长期写死。
 
-## 19. Developer Mode 应成为重写期间的标准 dogfood 入口
+## 20. Developer Mode 应成为重写期间的标准 dogfood 入口
 
 下一版继续保留：
 
@@ -634,7 +702,7 @@ Planner proposed Need
 
 的完整可见性。
 
-## 20. 下一次大范围重写的模块责任
+## 21. 下一次大范围重写的模块责任
 
 准备冻结成下面这张图：
 
@@ -664,11 +732,22 @@ Runtime Binder / Scheduler
 - bind accepted Artifact exports
 - enforce budgets/lifecycle
         │
-        ├── Dynamic Fact Adapter
-        ├── Web Research Adapter
-        ├── Knowledge Adapter
-        ├── Local Analytics Compiler
+        ├── Web Research
+        │     open semantic request + evidence governance
+        │
+        ├── Dynamic Fact / Knowledge
+        │     lookup semantics + provenance
+        │
+        ├── Local Analytics
+        │        ↓
+        │     SchemaCatalog
+        │        ↓
+        │     Safe Analytical IR
+        │        ↓
+        │     SQL
+        │
         └── Python Compute Sandbox
+              bounded Artifact computation
         │
         ▼
 ToolOutcome + Artifact
@@ -686,7 +765,7 @@ AnswerProjection
 Response
 ~~~
 
-## 21. 哪些旧代码值得大范围重写
+## 22. 哪些旧代码值得大范围重写
 
 下一轮不应该继续在这些地方打补丁：
 
@@ -703,7 +782,7 @@ Response
 
 优先目标是让同一条 data flow 只存在一个权威 owner。
 
-## 22. 哪些东西不要重写掉
+## 23. 哪些东西不要重写掉
 
 大改不意味着推翻所有积累。
 
@@ -727,7 +806,7 @@ Response
 - developer trace；
 - holdout / metamorphic / dogfood 分层测试。
 
-## 23. 重写后的成功标准
+## 24. 重写后的成功标准
 
 下一版是否成功，不再看“加了多少字段”或“某几个熟悉问题能不能过”。
 
@@ -747,13 +826,13 @@ Replanner 是否复用已有 Artifact？
 
 只有这些成立，Baseball Agent 才真正从“复杂 pipeline”开始变成一个可泛化的 analytical agent。
 
-## 24. 当前阶段结论
+## 25. 当前阶段结论
 
 第 11 篇文章把 Runtime 的中心从 fixed semantic pipeline 转向 Goal / Need / Artifact。
 
 这一轮又进一步把责任边界收紧：
 
-> **Goal / Requirement 保存用户想要什么。Planner 决定需要什么能力。Runtime 负责绑定真实数据产品。Executor 决定怎样安全执行。Judge / State 决定证据是否够。**
+> **Goal / Requirement 保存用户想要什么。Planner 决定需要什么能力。Runtime 负责绑定真实数据产品。Web 保持开放检索语义；只有数据库分析在 SQL 边界收敛。Judge / State 决定证据是否够。**
 
 这将作为下一次大范围代码重写的设计基线。
 
@@ -761,6 +840,6 @@ Replanner 是否复用已有 Artifact？
 
 真正要做的是：
 
-> **让开放语义一直保持开放，直到某个具体 Action 必须变得严格。**
+> **让开放语义一直保持开放；只有当分析真正要变成 SQL 时，才把它收敛到数据库能够安全、确定执行的形式。**
 
 **来源：** S9；历史背景参见 S5–S8。
