@@ -166,7 +166,7 @@
       "id": "BA-012",
       "slug": "12-late-binding-planner-executor-rewrite",
       "title": "重写前的架构收敛：Baseball Agent 为什么要把“理解、规划、执行”重新分开",
-      "description": "基于 v0.10 developer-mode dogfooding，冻结下一轮大范围重写的责任边界：Lossless Semantic、UserRequirement/PlannerNeed 分离、Planner→Runtime Binder→Tool Compiler、partial sufficiency 与可追溯执行。",
+      "description": "基于 v0.10 developer-mode dogfooding，冻结下一轮大范围重写边界：开放 Semantic/UserRequirement、Planner→Runtime Binding，以及只在数据库 SQL 边界进行严格收敛；Web 保持开放语义，DB 输出采用标准 envelope + 灵活 payload。",
       "category": "架构演进",
       "published": "2026-09-18",
       "updated": "2026-09-18",
