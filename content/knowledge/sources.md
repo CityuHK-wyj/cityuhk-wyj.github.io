@@ -1,6 +1,6 @@
 # 来源与覆盖范围
 
-首版整理日期：2026-09-07；最近更新：2026-09-17。本文说明哪些材料被实际读取，哪些来自当前讨论 / Stop Report，哪些已通过 GitHub 仓库直接核验。
+首版整理日期：2026-09-07；最近更新：2026-09-18。本文说明哪些材料被实际读取，哪些来自当前讨论 / Stop Report，哪些已通过 GitHub 仓库直接核验。
 
 ## 来源登记
 
@@ -14,6 +14,7 @@
 | S6 | `CityuHK-wyj/baseball_agent` GitHub 仓库直接审计（截至 2026-09-15） | 直接读取分支、提交、关键代码、测试、README、handoff、audit 文档与 compare metadata | Codex/DeepSeek/GPT-5.6/Pi/Astra 的真实实现与整合状态、Shared Knowledge V1、Runtime wiring、安全修复、当时 live probe 状态与 Git release ancestry 问题 |
 | S7 | 2026-09-16 至 2026-09-17 当前讨论、用户真实 dogfooding 输出、Pi/Codex Stop Reports | 当前会话直接可见；Stop Report 属于 agent/reviewer 报告，不自动等同远端仓库已核验 | v0.1 release 过程、semantic architecture 演进、真实 CLI 失败、dual-LLM、LLM-first/open-world 讨论、anti-shortcut/generalization audit 报告、Artifact-Driven Runtime 与 Shared Knowledge Governance 新方向 |
 | S8 | 2026-09-17 对 `CityuHK-wyj/baseball_agent` 与博客仓库的 GitHub 直接复核 | 直接核验 `main`、`v0.1.0` tag、`pi/v0.2-llm-first-runtime` branch/commit，以及博客当前内容 | v0.1.0 已发布事实、adoption commit、v0.2 远端实现 checkpoint、博客更新前状态；不能证明尚未推送/远端不可见的 Codex audit branch 或未来 v0.3 实现 |
+| S9 | 2026-09-17 至 2026-09-18 当前讨论、v0.3–v0.10 实现/Stop Reports、developer-mode dogfooding trace 与本轮架构复盘 | 当前会话与用户提供的运行输出；最新 v0.10 远端分支本次未在 GitHub 观察到 | Artifact Runtime hardening、Evidence Routing、Partial Sufficiency、Sandboxed Python、Lossless Semantic、Planner/Executor 边界缺陷，以及下一轮大范围重写设计基线 |
 
 S2 的原始材料含私人配置，本博客只转述项目逻辑，不附原脚本。S3 是模型生成的二次整理，其关于作者的叙述未在本次重新逐项核验；没有将它作为用户已经确认的项目决策。S5/S7 只覆盖本轮可见讨论，不应被理解为完整项目聊天导出。
 
@@ -129,3 +130,29 @@ S7 支持以下已经明确确认、但需要下一实现线落地的方向：
 - [GitHub Pages 快速入门](https://docs.github.com/en/pages/quickstart)
 - [创建 GitHub Pages 站点](https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site)
 - [配置 GitHub Pages 发布源](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source)
+
+
+## S9 当前架构重写基线
+
+2026-09-18 的最新 developer-mode trace 证明，Lossless Semantic 已经能保留用户意图，但 Planner 仍在过早生成 physical schema / Safe IR，并出现 Need dependency 到 Artifact binding 断裂、pseudo export reference、重复 replan、criticality 漂移等问题。
+
+因此当前准备冻结的新责任边界是：
+
+~~~text
+Semantic
+→ preserve intent
+
+Planner
+→ decide Need / capability / dependency
+
+Runtime Binder
+→ resolve real Artifact exports
+
+Tool Adapter / Compiler
+→ perform strict execution narrowing
+
+Judge / State
+→ evaluate evidence sufficiency
+~~~
+
+该方向是下一次大范围代码重写的 design baseline。最新 v0.10 分支本次没有通过 GitHub connector 在远端观察到，因此实现状态仍按 implementation report / dogfood observed 记录，而非 repository verified。
